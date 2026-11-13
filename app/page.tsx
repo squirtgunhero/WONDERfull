@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Wordmark } from '../components/Wordmark';
+import { describeScene } from '../lib/ai/client';
 import { TEMPLATES, starter } from '../lib/scene';
 import {
   createProject, currentEmail, deleteProject, duplicateProject, getProject, listProjects, saveProject, signIn, signOut, signUp, type Project,
@@ -20,6 +21,11 @@ const KINDS: [string, () => any, string][] = [
   ['Blank', blankScene, 'An empty stage with a camera and a light.'],
   ...(TEMPLATES as [string, () => any][]).map(([label, make]) => [label, make, ABOUT[label] || 'A ready-made scene.'] as [string, () => any, string]),
 ];
+const IDEAS = [
+  'A lighthouse on a rock at dusk with a slow turning beam',
+  'A landing page for a ceramics studio: three vases on a plinth, soft daylight, scroll to walk around them',
+  'A neon noodle bar sign on a wet brick wall that flickers on',
+];
 const when = (t: number) => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export default function Dashboard() {
@@ -30,6 +36,9 @@ export default function Dashboard() {
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
+  const [idea, setIdea] = useState('');
+  const [building, setBuilding] = useState(false);
+  const [aiMsg, setAiMsg] = useState('');
 
   const refresh = async () => {
     setEmail(await currentEmail().catch(() => null));
@@ -56,6 +65,21 @@ export default function Dashboard() {
       const p = await createProject(label === 'Blank' ? 'Untitled scene' : label, make());
       window.location.href = '/edit?id=' + p.id;
     } catch (err: any) { setMsg('The scene could not be created: ' + (err?.message || 'unknown error')); }
+  }
+  async function build() {
+    const prompt = idea.trim();
+    if (building) return;
+    if (prompt.length < 3) { setAiMsg('Describe the scene in a few words first.'); return; }
+    if (!email) { setAiMsg('Sign in to build from a description. Your words stay here while you do.'); setForm(true); return; }
+    setBuilding(true); setAiMsg('Building. This usually takes under a minute.');
+    try {
+      const built = await describeScene(prompt);
+      const p = await createProject(built.name, built.scene);
+      window.location.href = '/edit?id=' + p.id;
+    } catch (err: any) {
+      setAiMsg(err?.message || 'That did not work. Try again.');
+      setBuilding(false);
+    }
   }
   async function act(run: () => Promise<unknown>) {
     try { await run(); } catch (err: any) { setMsg('That did not work: ' + (err?.message || 'unknown error')); }
@@ -111,7 +135,24 @@ export default function Dashboard() {
       )}
       {msg && <p className="status" role="status" style={{ marginBottom: 18 }}>{msg}</p>}
 
-      <h2 className="sub">Start a new scene</h2>
+      <h2 className="sub" id="describe-h">Describe a scene</h2>
+      <form className="describe" onSubmit={(e) => { e.preventDefault(); build(); }}>
+        <textarea className="say" id="describe" rows={3} maxLength={2000} aria-labelledby="describe-h" value={idea} disabled={building}
+          placeholder="Say what you want to see. Objects, mood, colors, text, what moves and what happens on scroll."
+          onChange={(e) => setIdea(e.target.value)} />
+        <div className="newrow">
+          <button type="submit" className="primary" id="describeGo" disabled={building}>{building ? 'Building' : 'Build scene'}</button>
+          <span className="status" role="status" id="describeStatus">{aiMsg}</span>
+        </div>
+        {!idea && (
+          <div className="ideas">
+            <span>Or start from one of these:</span>
+            {IDEAS.map((text) => <button key={text} type="button" className="quiet" onClick={() => { setIdea(text); setAiMsg(''); }}>{text}</button>)}
+          </div>
+        )}
+      </form>
+
+      <h2 className="sub">Or start from a template</h2>
       <div className="starts">
         {KINDS.map(([label, make, about]) => (
           <button key={label} type="button" onClick={() => create(label, make)}><b>{label}</b><span>{about}</span></button>

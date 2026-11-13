@@ -103,6 +103,21 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--ac
 .starts button:hover { border-color: var(--ink); background: var(--paper); }
 .starts button b { font-size: 14px; font-weight: 600; }
 .starts button span { font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.describe { display: grid; gap: 10px; margin-bottom: 40px; max-width: 760px; }
+.describe .ideas { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; color: var(--ink-3); font-size: 13px; margin-top: 4px; }
+.describe .ideas button { text-align: left; white-space: normal; line-height: 1.35; margin-left: -8px; font-weight: 400; color: var(--ink-2); }
+textarea.say {
+  width: 100%; font: inherit; font-size: 15px; line-height: 1.45; color: var(--ink); resize: vertical; min-height: 84px;
+  padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--paper);
+}
+textarea.say::placeholder { color: var(--ink-3); }
+textarea.say:focus { border-color: var(--accent); outline: none; }
+textarea.say:disabled { opacity: 0.6; }
+.pane textarea.say { font-size: 14px; min-height: 96px; }
+.said { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.said li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.4; }
+.said li b { font-weight: 500; }
+.said li span { color: var(--ink-3); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 30px 22px; }
 .pcard { display: flex; flex-direction: column; min-width: 0; }
 .pcard .thumb { display: block; text-decoration: none; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; background: #dfe2e6; box-shadow: var(--lift); transition: box-shadow 160ms; }
@@ -186,7 +201,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--ac
 @media (min-width: 980px) {
   .editor-page { height: 100dvh; min-height: 0; overflow: hidden; }
   .topbar { flex-wrap: nowrap; height: 56px; padding: 0 16px; }
-  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 376px; }
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 408px; }
   .stage { position: relative; top: auto; height: auto; min-height: 0; margin: 16px; border-radius: 12px; box-shadow: var(--lift); }
   .panel { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); }
   .tabs { flex: none; padding: 0 10px; }
@@ -207,7 +222,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--ac
 }
 /* iOS zooms the page when a focused field's text is under 16px. */
 @media (pointer: coarse) {
-  input[type="text"], input[type="number"], input[type="password"], select, textarea.code { font-size: 16px; }
+  input[type="text"], input[type="number"], input[type="password"], select, textarea.code, textarea.say, .pane textarea.say { font-size: 16px; }
   input[type="range"]::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -8.5px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
