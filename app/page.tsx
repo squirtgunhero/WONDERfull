@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Wordmark } from '../components/Wordmark';
 import { TEMPLATES, starter } from '../lib/scene';
 import {
   createProject, currentEmail, deleteProject, duplicateProject, getProject, listProjects, saveProject, signIn, signOut, signUp, type Project,
@@ -11,7 +12,14 @@ function blankScene() {
   s.scrollCam = { on: false, orbit: 0, zoom: 1, rise: 0 };
   return s;
 }
-const KINDS: [string, () => any][] = [['Blank', blankScene], ...(TEMPLATES as [string, () => any][])];
+const ABOUT: Record<string, string> = {
+  'Starter shapes': 'A handful of objects with hover, click and scroll already set up.',
+  'Jersey Proper hero': 'A lit sign on a brick wall with text sections that follow the scroll.',
+};
+const KINDS: [string, () => any, string][] = [
+  ['Blank', blankScene, 'An empty stage with a camera and a light.'],
+  ...(TEMPLATES as [string, () => any][]).map(([label, make]) => [label, make, ABOUT[label] || 'A ready-made scene.'] as [string, () => any, string]),
+];
 const when = (t: number) => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export default function Dashboard() {
@@ -66,32 +74,28 @@ export default function Dashboard() {
 
   return (
     <div className="wrap">
-      <div className="dash-head">
-        <div>
-          <h1>WONDERfull</h1>
-          <p>Your 3D scenes and pages. Each one opens in the editor and has its own live page.</p>
-        </div>
-        <div className="newrow">
-          <span>New scene:</span>
-          {KINDS.map(([label, make]) => (
-            <button key={label} type="button" className={label === 'Blank' ? 'primary' : ''} onClick={() => create(label, make)}>{label}</button>
-          ))}
+      <div className="sitebar">
+        <Wordmark />
+        <div className="who">
+          {email ? (
+            <>
+              <strong>{email}</strong>
+              <button type="button" onClick={() => signOut().then(refresh)}>Sign out</button>
+            </>
+          ) : (
+            !form && <button type="button" onClick={() => { setForm(true); setMsg(''); }}>Sign in or create an account</button>
+          )}
         </div>
       </div>
 
-      <div className="acct">
-        {email ? (
-          <>
-            <span>Signed in as <strong>{email}</strong>. New scenes save to your account.</span>
-            <button type="button" onClick={() => signOut().then(refresh)}>Sign out</button>
-          </>
-        ) : (
-          <>
-            <span>You are working in this browser only. Sign in to save scenes to your account and publish live pages anyone can open.</span>
-            {!form && <button type="button" onClick={() => { setForm(true); setMsg(''); }}>Sign in or create an account</button>}
-          </>
-        )}
+      <div className="dash-head">
+        <h1>Scenes</h1>
+        <p>Build a 3D page, then publish it as a link anyone can open.</p>
       </div>
+
+      {!email && !form && (
+        <div className="acct">You are working in this browser only. Sign in to save scenes to your account and publish live pages anyone can open.</div>
+      )}
       {form && !email && (
         <form className="signin" onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); account('in', String(f.get('email') || ''), String(f.get('password') || '')); }}>
           <label htmlFor="acct-email">Email</label>
@@ -101,14 +105,22 @@ export default function Dashboard() {
           <div className="newrow">
             <button type="submit" className="primary" disabled={busy}>Sign in</button>
             <button type="button" disabled={busy} onClick={(e) => { const f = new FormData(e.currentTarget.form!); account('up', String(f.get('email') || ''), String(f.get('password') || '')); }}>Create account</button>
-            <button type="button" onClick={() => setForm(false)}>Cancel</button>
+            <button type="button" className="quiet" onClick={() => setForm(false)}>Cancel</button>
           </div>
         </form>
       )}
-      {msg && <p className="status" role="status">{msg}</p>}
+      {msg && <p className="status" role="status" style={{ marginBottom: 18 }}>{msg}</p>}
 
+      <h2 className="sub">Start a new scene</h2>
+      <div className="starts">
+        {KINDS.map(([label, make, about]) => (
+          <button key={label} type="button" onClick={() => create(label, make)}><b>{label}</b><span>{about}</span></button>
+        ))}
+      </div>
+
+      <h2 className="sub">Your scenes</h2>
       {projects === null ? null : projects.length === 0 ? (
-        <div className="empty">No scenes yet. Start one with the buttons above.</div>
+        <div className="empty">No scenes yet. Pick a starting point above and it opens in the editor.</div>
       ) : (
         <div className="grid">
           {projects.map((p) => (
@@ -125,18 +137,17 @@ export default function Dashboard() {
                   <div className="pn">{p.name}</div>
                 )}
                 <div className="tags">
-                  <span className="tag">{p.where === 'cloud' ? (p.isPublic ? 'Account · published' : 'Account · private') : 'This browser'}</span>
+                  {p.where === 'cloud' ? (p.isPublic ? <span className="tag live">Published</span> : <span className="tag">Private</span>) : <span className="tag">This browser</span>}
                   <time dateTime={new Date(p.updatedAt).toISOString()}>Edited {when(p.updatedAt)}</time>
                 </div>
                 <div className="acts">
-                  <a className="linkbtn primary" href={'/edit?id=' + p.id}>Edit</a>
-                  <a className="linkbtn" href={'/view?id=' + p.id} target="_blank" rel="noopener">Live page</a>
-                  <button type="button" onClick={() => setRenaming(p.id)}>Rename</button>
-                  <button type="button" onClick={() => act(() => duplicateProject(p.id))}>Duplicate</button>
+                  <a className="linkbtn quiet" href={'/view?id=' + p.id} target="_blank" rel="noopener">Live page</a>
+                  <button type="button" className="quiet" onClick={() => setRenaming(p.id)}>Rename</button>
+                  <button type="button" className="quiet" onClick={() => act(() => duplicateProject(p.id))}>Duplicate</button>
                   {email && p.where === 'local' && (
-                    <button type="button" onClick={() => act(() => duplicateProject(p.id, p.name))}>Copy to account</button>
+                    <button type="button" className="quiet" onClick={() => act(() => duplicateProject(p.id, p.name))}>Copy to account</button>
                   )}
-                  <button type="button" onClick={() => remove(p.id)}>{armed === p.id ? 'Tap again to delete' : 'Delete'}</button>
+                  <button type="button" className="quiet danger" onClick={() => remove(p.id)}>{armed === p.id ? 'Tap again to delete' : 'Delete'}</button>
                 </div>
               </div>
             </div>

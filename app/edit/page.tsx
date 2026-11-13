@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Editor } from '../../components/editor/Editor';
+import { Wordmark } from '../../components/Wordmark';
 import { getAssets, getProject, isCloudId, putAsset, saveProject, type Project } from '../../lib/store';
 
 type Loaded = { project: Project; buffers: Map<string, ArrayBuffer> };
@@ -33,33 +34,34 @@ function EditScene() {
       if (!alive) return;
       setName(project.name);
       setIsPublic(!!project.isPublic);
-      document.title = project.name + ' · WONDERfull';
+      document.title = project.name + ' | WONDERfull';
       setLoaded({ project, buffers });
     })();
     return () => { alive = false; };
   }, [id]);
 
   return (
-    <div className="wrap">
+    <div className="editor-page">
       <div className="topbar">
-        <a className="brand" href="/">WONDERfull</a>
+        <Wordmark href="/" />
         {loaded && (
           <>
             <input className="pname" type="text" id="projectName" aria-label="Scene name" value={name} maxLength={60}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => { const n = name.trim() || 'Untitled scene'; setName(n); update((cur) => ({ ...cur, name: n })); }} />
             <span className="saved" role="status">{status}</span>
+            {!cloud && <span className="tag" title="Sign in from All scenes to keep scenes in your account and publish them.">Saved in this browser</span>}
             <span className="grow" />
             {cloud && (
               <button type="button" className={isPublic ? '' : 'primary'} aria-pressed={isPublic}
                 onClick={() => { const next = !isPublic; setIsPublic(next); update((cur) => ({ ...cur, isPublic: next })); }}>
-                {isPublic ? 'Published. Tap to make private' : 'Publish live page'}
+                {isPublic ? 'Published. Make private' : 'Publish'}
               </button>
             )}
-            <a className="linkbtn" href={'/view?id=' + id} target="_blank" rel="noopener">Live page</a>
+            <a className="linkbtn" href={'/view?id=' + id} target="_blank" rel="noopener">Open live page</a>
           </>
         )}
-        <a className="linkbtn" href="/">All scenes</a>
+        <a className="linkbtn quiet" href="/">All scenes</a>
       </div>
       {missing && <div className="empty">This scene could not be opened. It may belong to another account or another browser. Go back to All scenes.</div>}
       {loaded && (
@@ -72,7 +74,6 @@ function EditScene() {
           onAsset={(file, buf) => { putAsset(loaded.project.id, file, buf).catch(() => setStatus('Model not saved')); }}
         />
       )}
-      {loaded && !cloud && <p className="note">This scene is saved in this browser only. Sign in from All scenes to keep scenes in your account and publish them.</p>}
     </div>
   );
 }
