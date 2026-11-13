@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import './globals.css';
 
-export const metadata = { title: 'Scene Studio', description: 'Build interactive 3D scenes and pages.' };
+export const metadata = { title: 'WONDERfull', description: 'Build interactive 3D scenes and pages.' };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

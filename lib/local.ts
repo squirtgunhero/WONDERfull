@@ -3,7 +3,7 @@ import type { Project } from './store';
 
 type Asset = { key: string; projectId: string; name: string; buf: ArrayBuffer };
 
-const DB_NAME = 'scene-studio';
+const DB_NAME = 'wonderfull';
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
