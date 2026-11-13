@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import type { EditorStore, Gizmo } from '../../lib/editor/store';
+import { fill } from './Fields';
 import { useEditor } from './useEditor';
 
 const GIZMOS: [Gizmo, string][] = [['translate', 'Move'], ['rotate', 'Turn'], ['scale', 'Size']];
@@ -49,7 +50,7 @@ export function Viewport({ store }: { store: EditorStore }) {
       ) : (
         <label className="scrub" id="scrub" htmlFor="scrollPrev" style={{ display: 'flex' }}>
           Scroll
-          <input type="range" id="scrollPrev" min={0} max={1} step={0.001} value={store.scroll} onChange={(e) => store.setScroll(Number(e.target.value))} />
+          <input type="range" id="scrollPrev" min={0} max={1} step={0.001} value={store.scroll} style={fill(store.scroll)} onChange={(e) => store.setScroll(Number(e.target.value))} />
         </label>
       )}
       <p className="hint" id="hint" role="status">{store.hint}</p>

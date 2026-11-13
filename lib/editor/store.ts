@@ -96,6 +96,9 @@ export class EditorStore {
       });
       this.rt.scene.add(this.tc.getHelper());
       this.attach();
+      // Give a scene that has never been edited a preview picture for the scene list.
+      const rt = this.rt;
+      setTimeout(() => { if (this.rt === rt && !this.saveTimer) this.opts.onSave(this.data, this.thumb()); }, 1500);
     } catch (e) {
       this.webglFailed = true;
     }

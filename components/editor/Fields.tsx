@@ -16,6 +16,12 @@ function NumberInput({ id, value, step, label, onValue }: { id: string; value: n
   );
 }
 
+// Inline style that tells the slider's track how far to fill.
+export function fill(value: number, min = 0, max = 1) {
+  const pct = max > min ? Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100)) : 0;
+  return { ['--p' as string]: pct + '%' } as React.CSSProperties;
+}
+
 // Renders a list of field definitions as labeled controls bound to `target`.
 // Edits are written straight into `target`, then onChange is called.
 export function Fields({ prefix, target, defs, onChange }: { prefix: string; target: any; defs: FieldDef[]; onChange: () => void }) {
@@ -57,7 +63,7 @@ export function Fields({ prefix, target, defs, onChange }: { prefix: string; tar
           return (
             <div className="row" key={id}>
               <label htmlFor={id}>{d.label}</label>
-              <input type="range" id={id} min={d.min} max={d.max} step={d.step} value={value}
+              <input type="range" id={id} min={d.min} max={d.max} step={d.step} value={value} style={fill(value, d.min, d.max)}
                 onChange={(e) => { const v = Number(e.target.value); set(d.type === 'uscale' ? [v, v, v] : v); }} />
               <output htmlFor={id}>{d.int ? String(Math.round(value)) : value.toFixed(2)}</output>
             </div>

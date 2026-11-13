@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { objectDefs, sceneDefs, sectionDefs, timelineDefs } from '../../lib/editor/defs';
 import { labelOf, type EditorStore, type Tab } from '../../lib/editor/store';
 import { NAMES, TEMPLATES } from '../../lib/scene';
-import { Fields } from './Fields';
+import { Fields, fill } from './Fields';
 import { useEditor } from './useEditor';
 
 const names = NAMES as Record<string, string>;
@@ -149,7 +149,7 @@ function TimelineTab({ store }: { store: EditorStore }) {
       <h2>Playhead</h2>
       <div className="row">
         <label htmlFor="tl-time">Time</label>
-        <input type="range" id="tl-time" min={0} max={dur} step={0.01} value={time} onChange={(e) => store.setTime(Number(e.target.value))} />
+        <input type="range" id="tl-time" min={0} max={dur} step={0.01} value={time} style={fill(time, 0, dur)} onChange={(e) => store.setTime(Number(e.target.value))} />
         <output htmlFor="tl-time">{stamp}</output>
       </div>
       <h2>Tracks</h2>
