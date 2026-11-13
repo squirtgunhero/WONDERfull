@@ -14,7 +14,7 @@ function blankScene() {
 }
 const ABOUT: Record<string, string> = {
   'Starter shapes': 'A handful of objects with hover, click and scroll already set up.',
-  'Jersey Proper hero': 'A lit sign on a brick wall with text sections that follow the scroll.',
+  'Neon sign': 'A glowing sign on a brick wall with text sections that follow the scroll.',
 };
 const KINDS: [string, () => any, string][] = [
   ['Blank', blankScene, 'An empty stage with a camera and a light.'],

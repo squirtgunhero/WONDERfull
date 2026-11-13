@@ -16,8 +16,8 @@
   --accent: #2438f5;      /* cobalt */
   --accent-soft: #e8ebff;
   --danger: #c2321f;
-  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
-  --ui: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Anybody Variable", "Arial Black", system-ui, sans-serif;
+  --ui: "Onest Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --lift: 0 1px 2px rgba(20, 22, 26, 0.06), 0 6px 20px rgba(20, 22, 26, 0.08);
 }
 * { box-sizing: border-box; }
@@ -30,9 +30,10 @@ a { color: inherit; }
 ::selection { background: var(--accent-soft); }
 
 /* ---------- Wordmark ---------- */
-.wm { font-family: var(--display); font-size: 21px; letter-spacing: -0.02em; text-decoration: none; color: var(--ink); line-height: 1; white-space: nowrap; }
-.wm b { font-weight: 800; }
-.wm span { font-weight: 400; }
+.wm { font-family: var(--display); font-size: 19px; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); line-height: 1; white-space: nowrap; }
+/* Wide and heavy running into narrow and light: the name stretched full. */
+.wm b { font-weight: 900; font-stretch: 150%; }
+.wm span { font-weight: 400; font-stretch: 75%; }
 
 /* ---------- Buttons, links, fields ---------- */
 button, .linkbtn, .filebtn {
@@ -86,7 +87,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--ac
 .sitebar .who { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 13px; min-width: 0; }
 .sitebar .who strong { font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
 .dash-head { padding: 44px 0 30px; }
-.dash-head h1 { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 6vw, 60px); line-height: 1; letter-spacing: -0.035em; margin: 0; }
+.dash-head h1 { font-family: var(--display); font-weight: 800; font-stretch: 125%; font-size: clamp(34px, 5.4vw, 56px); line-height: 1; letter-spacing: -0.02em; margin: 0; }
 .dash-head p { margin: 14px 0 0; color: var(--ink-2); font-size: 16px; max-width: 46ch; }
 .acct { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 14px; margin-bottom: 26px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; color: var(--ink-2); font-size: 13px; }
 .signin { display: grid; gap: 8px; max-width: 360px; padding: 16px; margin-bottom: 26px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
@@ -197,7 +198,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: var(--ac
 @media (max-width: 600px) {
   .wrap { padding: 0 16px 56px; }
   .dash-head { padding: 28px 0 22px; }
-  .topbar .wm { font-size: 18px; }
+  .topbar .wm { font-size: 16px; }
   .topbar .tag { display: none; }
   .topbar .saved { min-width: 0; }
   .topbar input.pname { flex: 1 1 130px; }
