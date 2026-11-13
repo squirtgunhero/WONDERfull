@@ -2,14 +2,52 @@
 import { useRef, useState } from 'react';
 import { objectDefs, sceneDefs, sectionDefs, timelineDefs } from '../../lib/editor/defs';
 import { labelOf, type EditorStore, type Tab } from '../../lib/editor/store';
+import { describeScene } from '../../lib/ai/client';
 import { NAMES, TEMPLATES } from '../../lib/scene';
 import { Fields, fill } from './Fields';
 import { useEditor } from './useEditor';
 
 const names = NAMES as Record<string, string>;
 const templates = TEMPLATES as [string, () => any][];
-const TABS: [Tab, string][] = [['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
+const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
 const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'text3d', 'text', 'particles', 'cord'];
+
+// Change the scene by saying what you want.
+function DescribeTab({ store }: { store: EditorStore }) {
+  const box = useRef<HTMLTextAreaElement>(null);
+  const { ai } = store;
+  const sel = store.selectedObject;
+  const empty = !store.data.objects.length;
+  const send = () => {
+    const prompt = box.current ? box.current.value.trim() : '';
+    if (prompt.length < 3 || ai.busy) return;
+    store.describe(prompt, describeScene).then(() => { if (!store.ai.status && box.current) box.current.value = ''; });
+  };
+  return (
+    <>
+      <h2 id="describe-h">{empty ? 'Describe the scene' : 'Describe a change'}</h2>
+      <textarea className="say" id="describeBox" ref={box} rows={4} maxLength={2000} aria-labelledby="describe-h" disabled={ai.busy}
+        placeholder={empty ? 'A lighthouse on a rock at dusk with a slow turning beam' : 'Make the background a deep night blue and add slow drifting snow'}
+        onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }} />
+      <div className="chips">
+        <button type="button" className="primary" id="describeGo" disabled={ai.busy} onClick={send}>{ai.busy ? 'Building' : empty ? 'Build it' : 'Apply change'}</button>
+      </div>
+      <p className="status" role="status" id="describeStatus">{ai.status}</p>
+      <p className="note">
+        {sel ? 'Selected: ' + labelOf(sel) + '. Say "this" or "it" to mean that object. ' : 'Select an object first to talk about just that one. '}
+        Each change is one step, so Undo brings the scene back.
+      </p>
+      {ai.log.length > 0 && (
+        <>
+          <h2>Changes so far</h2>
+          <ol className="said">
+            {ai.log.map((entry, i) => <li key={ai.log.length - i}><b>{entry.prompt}</b><span>{entry.summary}</span></li>)}
+          </ol>
+        </>
+      )}
+    </>
+  );
+}
 
 function ObjectsTab({ store }: { store: EditorStore }) {
   return (
@@ -213,6 +251,7 @@ export function Panel({ store }: { store: EditorStore }) {
         ))}
       </div>
       <div className="pane" id="pane">
+        {store.tab === 'describe' && <DescribeTab store={store} />}
         {store.tab === 'objects' && <ObjectsTab store={store} />}
         {store.tab === 'selected' && <SelectedTab store={store} />}
         {store.tab === 'scene' && <SceneTab store={store} />}

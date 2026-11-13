@@ -8,7 +8,7 @@ import { NAMES, clone, mk, normalize, objectSig, putKey, starter, uid } from '..
 import { createHistory } from './history';
 
 export type Mode = 'edit' | 'play';
-export type Tab = 'objects' | 'selected' | 'scene' | 'page' | 'timeline' | 'export';
+export type Tab = 'describe' | 'objects' | 'selected' | 'scene' | 'page' | 'timeline' | 'export';
 export type Gizmo = 'translate' | 'rotate' | 'scale';
 export type EditorOptions = {
   data: any;
@@ -33,6 +33,8 @@ export class EditorStore {
   time = 0;      // timeline playhead, in seconds
   scroll = 0;    // scroll preview in Play mode, 0 to 1
   webglFailed = false;
+  // Building from a description: whether a request is running, what to tell the person, and what was asked so far.
+  ai = { busy: false, status: '', log: [] as { prompt: string; summary: string }[] };
 
   private opts: EditorOptions;
   private rt: any = null;
@@ -252,6 +254,32 @@ export class EditorStore {
     this.time = 0;
     this.attach();
     this.commit(message);
+  }
+  // Changes the scene from a plain-language request. "run" does the asking, so this file stays free of network code.
+  // The result lands as one step that Undo reverses.
+  async describe(prompt: string, run: (prompt: string, scene: any, selected: string | null) => Promise<{ scene: any; summary: string }>) {
+    if (this.ai.busy) return;
+    this.ai.busy = true;
+    this.ai.status = 'Building. This usually takes under a minute.';
+    this.emit();
+    try {
+      this.history.commit(JSON.stringify(this.data));
+      const res = await run(prompt, clone(this.data), this.selected);
+      const keep = this.selected;
+      if (this.mode !== 'edit') this.setMode('edit');
+      this.replaceScene(res.scene);
+      this.selected = this.byId(keep) ? keep : null;
+      this.time = 0;
+      this.ai.log.unshift({ prompt, summary: res.summary });
+      this.ai.log.length = Math.min(this.ai.log.length, 12);
+      this.ai.busy = false;
+      this.ai.status = '';
+      this.commit(res.summary + ' Undo brings the scene back.');
+    } catch (e: any) {
+      this.ai.busy = false;
+      this.ai.status = (e && e.message) || 'That did not work. Try again.';
+      this.emit();
+    }
   }
 
   // ----- page sections -----
