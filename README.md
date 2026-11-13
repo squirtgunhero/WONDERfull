@@ -1,4 +1,4 @@
-# Scene Studio
+# WONDERfull
 
 A browser-based editor for interactive 3D scenes and pages, built with Next.js and three.js.
 

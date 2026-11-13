@@ -68,7 +68,7 @@ export default function Dashboard() {
     <div className="wrap">
       <div className="dash-head">
         <div>
-          <h1>Scene Studio</h1>
+          <h1>WONDERfull</h1>
           <p>Your 3D scenes and pages. Each one opens in the editor and has its own live page.</p>
         </div>
         <div className="newrow">

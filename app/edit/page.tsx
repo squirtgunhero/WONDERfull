@@ -33,7 +33,7 @@ function EditScene() {
       if (!alive) return;
       setName(project.name);
       setIsPublic(!!project.isPublic);
-      document.title = project.name + ' · Scene Studio';
+      document.title = project.name + ' · WONDERfull';
       setLoaded({ project, buffers });
     })();
     return () => { alive = false; };
@@ -42,7 +42,7 @@ function EditScene() {
   return (
     <div className="wrap">
       <div className="topbar">
-        <a className="brand" href="/">Scene Studio</a>
+        <a className="brand" href="/">WONDERfull</a>
         {loaded && (
           <>
             <input className="pname" type="text" id="projectName" aria-label="Scene name" value={name} maxLength={60}
