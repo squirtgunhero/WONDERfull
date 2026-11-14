@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { neonSign, normalize, starter } from '../lib/scene.js';
 import { compactScene, link, sanitizeScene } from '../lib/ai/sanitize.js';
 import { readReply, runBuild } from '../lib/ai/build.js';
+import { LIBRARY, PARTS } from '../lib/templates.js';
 
 const toolReply = (input) => ({ status: 200, body: { stop_reason: 'tool_use', content: [{ type: 'text', text: 'Here you go.' }, { type: 'tool_use', name: 'build_scene', input }] } });
 const deps = (over = {}) => ({ key: 'k', user: async () => 'u1', quota: async () => ({ allowed: true, used: 1, limit: 40 }), ask: async () => toolReply({ name: 'T', summary: 'S', scene: { objects: [{ id: 'a', type: 'box' }] } }), ...over });
@@ -208,4 +209,20 @@ test('physics settings are cleaned and saved materials stay the person\'s own', 
   assert.deepEqual(s.palette, ['#abcdef']);
   assert.equal(s.swatches[0].mat.metalness, 1);
   assert.equal(s.swatches[0].mat.extra, undefined);
+});
+
+test('every library template is a valid scene that the cleaner leaves whole', () => {
+  assert.ok(LIBRARY.length >= 12);
+  for (const t of LIBRARY) {
+    const made = t.make();
+    normalize(made);
+    const ids = made.objects.map((o) => o.id);
+    assert.equal(new Set(ids).size, ids.length, t.label + ': ids are unique');
+    const cleaned = sanitizeScene(JSON.parse(JSON.stringify(made)), made);
+    normalize(cleaned);
+    const round = (v) => JSON.parse(JSON.stringify(v, (k, x) => (typeof x === 'number' ? Math.round(x * 1000) / 1000 : x)));
+    assert.deepEqual(cleaned.objects, round(made.objects), t.label + ': every value is within what the editor allows');
+    for (const o of made.objects) if (o.click.target) assert.ok(ids.includes(o.click.target), t.label + ': click targets exist');
+  }
+  for (const [label, make] of PARTS) assert.ok(make().every((o) => o.group === label), label + ' parts share a group');
 });
