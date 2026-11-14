@@ -59,6 +59,12 @@ npm run dev        # http://localhost:3000
 - Export tab, Code: an HTML or React snippet that runs the scene on any page through
   `/wonderfull-runtime.js`, which `scripts/build-embed.mjs` bundles from `lib/embed.js` before each build.
 
+## Templates and lessons
+
+- `lib/templates.js` holds the template library (scenes, objects, motion) and the ready-made
+  objects the Objects tab can drop into a scene. A unit test checks every template is valid.
+- `/learn` is a page of short lessons, one per feature.
+
 ## Groups
 
 Objects that share a Group name (set in the Selected tab) are one thing made of parts. They are

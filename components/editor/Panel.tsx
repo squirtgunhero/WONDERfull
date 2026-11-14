@@ -3,12 +3,14 @@ import { useRef, useState } from 'react';
 import { objectDefs, sceneDefs, sectionDefs, timelineDefs } from '../../lib/editor/defs';
 import { labelOf, type EditorStore, type Tab } from '../../lib/editor/store';
 import { describeScene } from '../../lib/ai/client';
-import { NAMES, TEMPLATES } from '../../lib/scene';
+import { NAMES } from '../../lib/scene';
+import { LIBRARY, PARTS } from '../../lib/templates';
 import { Fields, fill } from './Fields';
 import { useEditor } from './useEditor';
 
 const names = NAMES as Record<string, string>;
-const templates = TEMPLATES as [string, () => any][];
+const templates = (LIBRARY as { label: string; make: () => any }[]).map((t) => [t.label, t.make] as [string, () => any]);
+const parts = PARTS as [string, () => any[]][];
 const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
 const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'text3d', 'text', 'particles', 'cord', 'light'];
 
@@ -90,6 +92,10 @@ function ObjectsTab({ store }: { store: EditorStore }) {
           <input type="file" id="glbFile" accept=".glb,.gltf,model/gltf-binary,image/png,image/jpeg,image/webp,image/gif,image/svg+xml" aria-label="Import a GLB model or a picture"
             onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) store.importFile(f); e.target.value = ''; }} />
         </label>
+      </div>
+      <h2>Ready-made</h2>
+      <div className="chips">
+        {parts.map(([label, make]) => <button key={label} type="button" onClick={() => store.addPart(label, make())}>{label}</button>)}
       </div>
       <h2>In this scene</h2>
       <div className="list">
@@ -189,10 +195,10 @@ function SceneTab({ store }: { store: EditorStore }) {
         </div>
       )}
       <p className="note">A clickable object can move the view to a saved camera. Set that under Click in the Selected tab.</p>
-      <h2>Scenes</h2>
+      <h2>Replace with a template</h2>
       <div className="chips">
         {templates.map(([label, make]) => (
-          <button key={label} type="button" onClick={() => store.loadScene(make(), 'Loaded ' + label + '. Undo brings your scene back.')}>Load {label}</button>
+          <button key={label} type="button" onClick={() => store.loadScene(make(), 'Loaded ' + label + '. Undo brings your scene back.')}>{label}</button>
         ))}
       </div>
       <textarea className="code" id="pasteScene" ref={paste} spellCheck={false} style={{ height: 90 }}

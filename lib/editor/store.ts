@@ -271,6 +271,22 @@ export class EditorStore {
     this.selected = o.id;
     this.commit();
   }
+  // Drops a ready-made object into the scene as its own group, in front of the camera's target.
+  addPart(label: string, parts: any[]) {
+    const taken = new Set(this.data.objects.map((o: any) => o.group));
+    let group = label;
+    for (let n = 2; taken.has(group); n++) group = label + ' ' + n;
+    const ids = new Map<string, string>(parts.map((o: any) => [o.id, uid()]));
+    const n = this.data.objects.length, dx = ((n % 3) - 1) * 0.9, dz = 0.6 + (n % 2) * 0.5;
+    parts.forEach((o: any) => {
+      o.id = ids.get(o.id); o.group = group; o.pos = [r3(o.pos[0] + dx), o.pos[1], r3(o.pos[2] + dz)];
+      if (ids.has(o.click.target)) o.click.target = ids.get(o.click.target);
+      this.data.objects.push(o);
+    });
+    this.selected = parts[0].id;
+    this.wholeGroup = true;
+    this.commit('Added ' + group + '. The handles move all of it.');
+  }
   setWholeGroup(on: boolean) { this.wholeGroup = on; this.emit(); }
   removeGroup(name: string) {
     this.data.objects = this.data.objects.filter((o: any) => o.group !== name);

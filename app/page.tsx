@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Wordmark } from '../components/Wordmark';
 import { describeScene } from '../lib/ai/client';
-import { TEMPLATES, starter } from '../lib/scene';
+import { starter } from '../lib/scene';
+import { LIBRARY } from '../lib/templates';
 import {
   createProject, currentEmail, deleteProject, duplicateProject, getProject, listProjects, saveProject, signIn, signOut, signUp, type Project,
 } from '../lib/store';
@@ -13,14 +14,8 @@ function blankScene() {
   s.scrollCam = { on: false, orbit: 0, zoom: 1, rise: 0 };
   return s;
 }
-const ABOUT: Record<string, string> = {
-  'Starter shapes': 'A handful of objects with hover, click and scroll already set up.',
-  'Neon sign': 'A glowing sign on a brick wall with text sections that follow the scroll.',
-};
-const KINDS: [string, () => any, string][] = [
-  ['Blank', blankScene, 'An empty stage with a camera and a light.'],
-  ...(TEMPLATES as [string, () => any][]).map(([label, make]) => [label, make, ABOUT[label] || 'A ready-made scene.'] as [string, () => any, string]),
-];
+const KINDS = ['Scenes', 'Objects', 'Motion'];
+const library = LIBRARY as { label: string; kind: string; about: string; make: () => any }[];
 const IDEAS = [
   'A lighthouse on a rock at dusk with a slow turning beam',
   'A landing page for a ceramics studio: three vases on a plinth, soft daylight, scroll to walk around them',
@@ -101,6 +96,7 @@ export default function Dashboard() {
       <div className="sitebar">
         <Wordmark />
         <div className="who">
+          <a className="linkbtn quiet" href="/learn">Learn</a>
           {email ? (
             <>
               <strong>{email}</strong>
@@ -154,10 +150,18 @@ export default function Dashboard() {
 
       <h2 className="sub">Or start from a template</h2>
       <div className="starts">
-        {KINDS.map(([label, make, about]) => (
-          <button key={label} type="button" onClick={() => create(label, make)}><b>{label}</b><span>{about}</span></button>
-        ))}
+        <button type="button" onClick={() => create('Blank', blankScene)}><b>Blank</b><span>An empty stage with a camera and a light.</span></button>
       </div>
+      {KINDS.map((kind) => (
+        <div key={kind}>
+          <h3 className="kind">{kind}</h3>
+          <div className="starts">
+            {library.filter((t) => t.kind === kind).map((t) => (
+              <button key={t.label} type="button" onClick={() => create(t.label, t.make)}><b>{t.label}</b><span>{t.about}</span></button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       <h2 className="sub">Your scenes</h2>
       {projects === null ? null : projects.length === 0 ? (
