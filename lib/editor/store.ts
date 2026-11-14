@@ -29,6 +29,9 @@ export class EditorStore {
   selected: string | null = null;
   mode: Mode = 'edit';
   tab: Tab = 'objects';
+  // On wide screens the editor has two panels: Describe and Objects on the left, everything else on the right.
+  wide = false;
+  leftTab: 'describe' | 'objects' = 'describe';
   gizmo: Gizmo = 'translate';
   time = 0;      // timeline playhead, in seconds
   scroll = 0;    // scroll preview in Play mode, 0 to 1
@@ -228,7 +231,16 @@ export class EditorStore {
     this.attach();
     this.emit();
   }
-  setTab(tab: Tab) { this.tab = tab; this.emit(); }
+  setTab(tab: Tab) {
+    if (this.wide && (tab === 'describe' || tab === 'objects')) this.leftTab = tab; else this.tab = tab;
+    this.emit();
+  }
+  setWide(wide: boolean) { if (wide !== this.wide) { this.wide = wide; this.emit(); } }
+  // What the right-hand panel shows: the open tab, or the selection (else the scene) when the open tab lives on the left.
+  get rightTab(): Tab {
+    if (this.tab !== 'describe' && this.tab !== 'objects') return this.tab;
+    return this.selected ? 'selected' : 'scene';
+  }
   setGizmo(gizmo: Gizmo) { this.gizmo = gizmo; if (this.tc) this.tc.setMode(gizmo); this.emit(); }
   setScroll(v: number) { this.scroll = v; this.emit(); }
 

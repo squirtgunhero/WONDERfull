@@ -27,7 +27,7 @@ npm run dev        # http://localhost:3000
 | `lib/editor/path.ts` | Read and write nested values by a dotted path |
 | `components/editor/Editor.tsx` | The editor for one scene: viewport plus side panel |
 | `components/editor/Viewport.tsx` | The 3D view and its on-canvas controls |
-| `components/editor/Panel.tsx` | The side panel and its seven tabs |
+| `components/editor/Panel.tsx` | The side panels and their tabs. Wide screens get two panels, narrow screens one |
 | `components/editor/Fields.tsx` | Renders field definitions as form controls |
 | `app/api/build/route.ts` | `POST /api/build`: turns a description into a scene, or changes the scene sent with it |
 | `lib/ai/prompt.js` | What the model is told about scenes, and the tool it answers through |
