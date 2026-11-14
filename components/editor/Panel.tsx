@@ -69,7 +69,7 @@ function ObjectsTab({ store }: { store: EditorStore }) {
     if (at) at.parts.push(o); else entries.push({ group: o.group || '', parts: [o] });
   });
   const row = (o: any) => {
-    const missing = o.type === 'model' && !store.hasBuffer(o.file);
+    const missing = (o.type === 'model' || o.type === 'image') && !store.hasBuffer(o.file);
     return (
       <div className={'item' + (o.id === store.selected ? ' sel' : '')} key={o.id}>
         <button type="button" className="name" onClick={() => store.select(o.id, true)}>
@@ -86,8 +86,8 @@ function ObjectsTab({ store }: { store: EditorStore }) {
       <div className="chips">
         {ADDABLE.map((t) => <button key={t} type="button" onClick={() => store.addObject(t)}>{names[t]}</button>)}
         <label className="filebtn">
-          Import GLB
-          <input type="file" id="glbFile" accept=".glb,.gltf,model/gltf-binary" aria-label="Import a GLB model"
+          Import a model or picture
+          <input type="file" id="glbFile" accept=".glb,.gltf,model/gltf-binary,image/png,image/jpeg,image/webp,image/gif,image/svg+xml" aria-label="Import a GLB model or a picture"
             onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) store.importFile(f); e.target.value = ''; }} />
         </label>
       </div>
@@ -119,6 +119,30 @@ function SelectedTab({ store }: { store: EditorStore }) {
           <input type="checkbox" id="wholeGroup" checked={store.wholeGroup} onChange={(e) => store.setWholeGroup(e.target.checked)} />
           The handles move all of {o.group} ({store.groupOf(o).length} parts)
         </label>
+      )}
+      {o.type !== 'model' && o.type !== 'light' && (
+        <div className="lib">
+          <h2>Saved materials</h2>
+          <div className="chips">
+            {store.data.swatches.map((sw: any) => (
+              <span className="kchip" key={sw.id}>
+                <button type="button" aria-label={'Use the material ' + sw.name} onClick={() => store.applyMaterial(sw.id)}><i className="dotc" style={{ background: sw.mat.color }} />{sw.name}</button>
+                <button type="button" aria-label={'Remove the material ' + sw.name} onClick={() => store.removeMaterial(sw.id)}>✕</button>
+              </span>
+            ))}
+            <button type="button" id="saveMaterial" onClick={() => store.saveMaterial()}>Save this material</button>
+          </div>
+          <h2>Scene colors</h2>
+          <div className="chips">
+            {store.data.palette.map((hex: string) => (
+              <span className="kchip" key={hex}>
+                <button type="button" aria-label={'Use the color ' + hex} onClick={() => store.applyColor(hex)}><i className="dotc" style={{ background: hex }} />{hex}</button>
+                <button type="button" aria-label={'Remove the color ' + hex} onClick={() => store.removeColor(hex)}>✕</button>
+              </span>
+            ))}
+            <button type="button" id="addColor" onClick={() => store.addColor()}>Keep this color</button>
+          </div>
+        </div>
       )}
       <Fields prefix="o" target={o} defs={objectDefs(o, store.data)} onChange={() => store.commit()} />
       <p className="note">States, loops and scroll run in Play mode.</p>
@@ -273,6 +297,20 @@ function ExportTab({ store }: { store: EditorStore }) {
   const code = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState('');
   const embed = '<iframe src="' + store.viewUrl + '" title="3D scene" loading="lazy" style="width:100%;height:100vh;border:0"></iframe>';
+  const [kind, setKind] = useState<'html' | 'react'>('html');
+  const origin = store.viewUrl.split('/view')[0];
+  const json = JSON.stringify(store.data).replace(/</g, '\\u003c');
+  const snippet = kind === 'html'
+    ? '<div id="wonderfull-scene" style="width:100%;height:100vh"></div>\n<script src="' + origin + '/wonderfull-runtime.js"></script>\n<script>\n  WONDERfull.mount("#wonderfull-scene", ' + json + ');\n</script>'
+    : "import { useEffect, useRef } from 'react';\n\nconst scene = " + json + ";\n\nexport default function Scene() {\n  const ref = useRef(null);\n  useEffect(() => {\n    let mounted;\n    const s = document.createElement('script');\n    s.src = '" + origin + "/wonderfull-runtime.js';\n    s.onload = () => { if (ref.current) mounted = window.WONDERfull.mount(ref.current, scene); };\n    document.head.appendChild(s);\n    return () => { if (mounted) mounted.unmount(); s.remove(); };\n  }, []);\n  return <div ref={ref} style={{ width: '100%', height: '100vh' }} />;\n}";
+  const download = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(store.data, null, 2)], { type: 'application/json' }));
+    a.download = 'scene.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setStatus('Scene file downloaded.');
+  };
   const copy = (text: string, done: string, select: boolean) => {
     const fail = () => {
       setStatus('Copy was blocked here. The text is selected, so copy it by hand.');
@@ -292,6 +330,17 @@ function ExportTab({ store }: { store: EditorStore }) {
         <button type="button" onClick={() => copy(JSON.stringify(store.data, null, 2), 'Scene data copied.', false)}>Copy scene data</button>
       </div>
       <p className="status" role="status">{status}</p>
+      <h2>Code</h2>
+      <p className="note">Runs the scene on your own page, with no frame around it. The scene travels inside the code, so it works without publishing. Imported models and pictures are not included.</p>
+      <div className="chips" role="group" aria-label="Code format">
+        <button type="button" aria-pressed={kind === 'html'} onClick={() => setKind('html')}>HTML</button>
+        <button type="button" aria-pressed={kind === 'react'} onClick={() => setKind('react')}>React</button>
+      </div>
+      <textarea className="code" id="codeExport" readOnly spellCheck={false} style={{ height: 150 }} aria-label="Code for your own page" value={snippet} />
+      <div className="chips">
+        <button type="button" className="primary" id="copyCode" onClick={() => copy(snippet, 'Code copied.', false)}>Copy code</button>
+        <button type="button" id="downloadScene" onClick={download}>Download scene file</button>
+      </div>
     </>
   );
 }

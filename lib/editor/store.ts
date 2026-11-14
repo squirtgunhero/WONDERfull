@@ -297,17 +297,20 @@ export class EditorStore {
   async importFile(file: File) {
     // Storage keys allow a limited set of characters, so the stored name is a cleaned copy.
     const name = file.name.replace(/[^A-Za-z0-9._-]/g, '_');
+    const picture = /\.(png|jpe?g|webp|gif|svg)$/i.test(name);
+    if (picture && file.size > 8 * 1024 * 1024) { this.say('That picture is over 8 MB. Use a smaller one.'); return; }
     let buf: ArrayBuffer;
     try { buf = await file.arrayBuffer(); } catch (e) { this.say('That file could not be read.'); return; }
     this.buffers.set(name, buf);
     this.opts.onAsset(name, buf);
-    const waiting = this.data.objects.filter((o: any) => o.type === 'model' && o.file === name);
+    const waiting = this.data.objects.filter((o: any) => (o.type === 'model' || o.type === 'image') && o.file === name);
     if (waiting.length) {
       waiting.forEach((o: any) => this.rt && this.rt.rebuild(o));
       this.attach();
       this.say('Reloaded ' + name);
     } else {
-      this.addObject('model', { name: name.replace(/\.[^.]+$/, ''), file: name });
+      if (picture) this.addObject('image', { name: name.replace(/\.[^.]+$/, ''), file: name, pos: [0, 1.2, 0.6], mat: { color: '#ffffff', roughness: 0.8 } });
+      else this.addObject('model', { name: name.replace(/\.[^.]+$/, ''), file: name });
     }
   }
   loadScene(next: any, message: string) {
@@ -343,6 +346,30 @@ export class EditorStore {
       this.emit();
     }
   }
+
+  // ----- saved materials and colors -----
+  saveMaterial() {
+    const o = this.selectedObject;
+    if (!o) return;
+    const n = this.data.swatches.length + 1;
+    this.data.swatches.push({ id: uid(), name: (labelOf(o) + ' look').slice(0, 30), mat: clone(o.mat) });
+    this.commit('Saved as a material. It is listed for every object in this scene.');
+  }
+  applyMaterial(id: string) {
+    const o = this.selectedObject, sw = this.data.swatches.find((x: any) => x.id === id);
+    if (!o || !sw) return;
+    o.mat = clone(sw.mat);
+    this.commit();
+  }
+  removeMaterial(id: string) { this.data.swatches = this.data.swatches.filter((x: any) => x.id !== id); this.commit(); }
+  addColor() {
+    const o = this.selectedObject;
+    if (!o || this.data.palette.includes(o.mat.color)) return;
+    this.data.palette.push(o.mat.color);
+    this.commit();
+  }
+  applyColor(hex: string) { const o = this.selectedObject; if (o) { o.mat.color = hex; this.commit(); } }
+  removeColor(hex: string) { this.data.palette = this.data.palette.filter((c: string) => c !== hex); this.commit(); }
 
   // ----- cameras -----
   private view() { return { pos: this.rt.camera.position.toArray().map(r3), target: this.rt.controls.target.toArray().map(r3) }; }
