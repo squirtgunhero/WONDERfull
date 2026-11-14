@@ -154,3 +154,16 @@ test('runBuild sends the current scene in short form and reports model trouble p
   assert.equal(await status(toolReply({ scene: { objects: [] } })), 'empty_scene');
   assert.equal((await runBuild({ prompt: 'a cat' }, deps({ ask: async () => { throw new Error('aborted'); } }))).status, 504);
 });
+
+test('lights are kept within limits and earlier requests travel with an edit', async () => {
+  const lights = Array.from({ length: 12 }, (_, i) => ({ id: 'l' + i, type: 'light', power: 999, reach: -4, mat: { color: '#ffaa00' } }));
+  const s = sanitizeScene({ objects: [...lights, { id: 'd', type: 'dome' }, { id: 'h', type: 'heart' }] });
+  assert.equal(s.objects.filter((o) => o.type === 'light').length, 8);
+  assert.equal(s.objects[0].power, 40);
+  assert.equal(s.objects[0].reach, 0);
+  assert.deepEqual(s.objects.slice(-2).map((o) => o.type), ['dome', 'heart']);
+  let sent = '';
+  const ask = async (messages) => { sent = messages[0].content; return toolReply({ scene: { objects: [{ id: 'a', type: 'box' }] } }); };
+  await runBuild({ prompt: 'warmer', scene: { objects: [{ id: 'a', type: 'box' }] }, earlier: ['add a lamp', 7, 'make it night'] }, deps({ ask }));
+  assert.match(sent, /oldest first, already applied:\n- add a lamp\n- make it night\n/);
+});

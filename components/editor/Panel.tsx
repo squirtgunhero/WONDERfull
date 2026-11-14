@@ -10,7 +10,7 @@ import { useEditor } from './useEditor';
 const names = NAMES as Record<string, string>;
 const templates = TEMPLATES as [string, () => any][];
 const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
-const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'text3d', 'text', 'particles', 'cord'];
+const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'text3d', 'text', 'particles', 'cord', 'light'];
 
 // Change the scene by saying what you want.
 function DescribeTab({ store }: { store: EditorStore }) {
@@ -21,7 +21,7 @@ function DescribeTab({ store }: { store: EditorStore }) {
   const send = () => {
     const prompt = box.current ? box.current.value.trim() : '';
     if (prompt.length < 3 || ai.busy) return;
-    store.describe(prompt, describeScene).then(() => { if (!store.ai.status && box.current) box.current.value = ''; });
+    store.describe(prompt, (text, scene, selected, earlier) => describeScene(text, scene, selected, earlier)).then(() => { if (!store.ai.status && box.current) box.current.value = ''; });
   };
   return (
     <>

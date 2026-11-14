@@ -17,7 +17,8 @@ export type FieldDef = {
 };
 
 const notModel = (o: any) => o.type !== 'model';
-const solid = (o: any) => o.type !== 'model' && o.type !== 'particles';
+const solid = (o: any) => o.type !== 'model' && o.type !== 'particles' && o.type !== 'light';
+const shines = (o: any) => o.type !== 'model' && o.type !== 'light';
 const stateLook = (s: string): FieldDef[] => {
   const vis = (o: any) => s !== 'hover' || o.hover.on;
   return [
@@ -63,18 +64,22 @@ export const objectDefs = (me: any, data: any): FieldDef[] => [
   { k: 'spread', label: 'Spread', type: 'range', min: 0.5, max: 8, step: 0.1, def: 3, show: (o: any) => o.type === 'particles' },
   { k: 'psize', label: 'Dot size', type: 'range', min: 0.01, max: 0.25, step: 0.005, def: 0.06, show: (o: any) => o.type === 'particles' },
   { k: 'speed', label: 'Drift', type: 'range', min: 0, max: 2, step: 0.05, def: 0.4, show: (o: any) => o.type === 'particles' },
+  { k: 'power', label: 'Brightness', type: 'range', min: 0, max: 40, step: 0.5, def: 8, show: (o: any) => o.type === 'light' },
+  { k: 'reach', label: 'Reach', type: 'range', min: 0, max: 30, step: 0.5, def: 8, show: (o: any) => o.type === 'light' },
+  { note: 'A light shines on nearby objects. Its marker only shows while editing.', show: (o: any) => o.type === 'light' },
   { h: 'Transform' },
   { k: 'pos', label: 'Position', type: 'vec3', step: 0.1 },
   { k: 'rot', label: 'Rotation', type: 'vec3', step: 5 },
   { k: 'scale', label: 'Size', type: 'uscale', min: 0.1, max: 4, step: 0.05 },
-  { h: 'Material', show: notModel },
+  { h: 'Material', show: shines },
+  { h: 'Light color', show: (o: any) => o.type === 'light' },
   { k: 'mat.color', label: 'Color', type: 'color', show: notModel },
   { k: 'mat.roughness', label: 'Roughness', type: 'range', min: 0, max: 1, step: 0.01, show: solid },
   { k: 'mat.metalness', label: 'Metal', type: 'range', min: 0, max: 1, step: 0.01, show: solid },
   { k: 'mat.surface', label: 'Surface', type: 'select', options: [['none', 'Smooth'], ['brick', 'Brick'], ['plaster', 'Plaster'], ['ribbed', 'Ribbed']], show: (o: any) => solid(o) && o.type !== 'text' },
   { k: 'mat.texScale', label: 'Texture size', type: 'range', min: 0.1, max: 3, step: 0.05, def: 1, show: (o: any) => solid(o) && o.mat.surface && o.mat.surface !== 'none' },
-  { k: 'mat.glow', label: 'Glow', type: 'range', min: 0, max: 3, step: 0.05, show: notModel },
-  { k: 'mat.opacity', label: 'Opacity', type: 'range', min: 0.05, max: 1, step: 0.01, show: notModel },
+  { k: 'mat.glow', label: 'Glow', type: 'range', min: 0, max: 3, step: 0.05, show: shines },
+  { k: 'mat.opacity', label: 'Opacity', type: 'range', min: 0.05, max: 1, step: 0.01, show: shines },
   { k: 'mat.glass', label: 'Glass', type: 'range', min: 0, max: 1, step: 0.01, show: (o: any) => solid(o) && o.type !== 'text' },
   { h: 'Motion' },
   { k: 'anim.kind', label: 'Loop', type: 'select', options: [['none', 'None'], ['float', 'Float'], ['spin', 'Spin'], ['wobble', 'Wobble'], ['pulse', 'Pulse'], ['flicker', 'Flicker on (glow)']] },

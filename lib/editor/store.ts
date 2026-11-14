@@ -213,6 +213,7 @@ export class EditorStore {
     if (type === 'text' || type === 'text3d') { o.text = 'Your words'; o.mat.color = '#143b29'; }
     if (type === 'text3d') { o.depth = 0.25; o.bevel = 0.03; }
     if (type === 'cord') { o.pos = [0, 2, 0.6]; o.to = [1, -1.5, 0]; o.slack = 0.4; o.thick = 0.02; o.mat.color = '#161616'; }
+    if (type === 'light') { o.pos = [0, 2, 0.6]; o.power = 8; o.reach = 8; o.mat.color = '#ffd9a0'; }
     if (type === 'particles') { o.pos = [0, 1.3, 0]; o.count = 200; o.spread = 3; o.speed = 0.4; o.psize = 0.11; o.mat.color = '#ff4f2e'; }
     this.data.objects.push(o);
     this.selected = o.id;
@@ -257,14 +258,14 @@ export class EditorStore {
   }
   // Changes the scene from a plain-language request. "run" does the asking, so this file stays free of network code.
   // The result lands as one step that Undo reverses.
-  async describe(prompt: string, run: (prompt: string, scene: any, selected: string | null) => Promise<{ scene: any; summary: string }>) {
+  async describe(prompt: string, run: (prompt: string, scene: any, selected: string | null, earlier: string[]) => Promise<{ scene: any; summary: string }>) {
     if (this.ai.busy) return;
     this.ai.busy = true;
     this.ai.status = 'Building. This usually takes under a minute.';
     this.emit();
     try {
       this.history.commit(JSON.stringify(this.data));
-      const res = await run(prompt, clone(this.data), this.selected);
+      const res = await run(prompt, clone(this.data), this.selected, this.ai.log.slice(0, 6).map((x) => x.prompt).reverse());
       const keep = this.selected;
       if (this.mode !== 'edit') this.setMode('edit');
       this.replaceScene(res.scene);
