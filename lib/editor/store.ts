@@ -33,6 +33,7 @@ export class EditorStore {
   time = 0;      // timeline playhead, in seconds
   scroll = 0;    // scroll preview in Play mode, 0 to 1
   webglFailed = false;
+  wholeGroup = true; // when the selected object belongs to a group, the handles move every part of it
   // Building from a description: whether a request is running, what to tell the person, and what was asked so far.
   ai = { busy: false, status: '', log: [] as { prompt: string; summary: string }[] };
 
@@ -70,9 +71,13 @@ export class EditorStore {
   get hint() {
     if (this.message) return this.message;
     if (this.mode === 'play') return 'Play mode. Hover, tap, and drag the Scroll slider.';
+    const sel = this.selectedObject;
+    if (sel && sel.group && this.wholeGroup) return 'The handles move all of ' + sel.group + '. Drag empty space to orbit.';
     return this.selected ? 'Drag the handles to move it. Drag empty space to orbit.' : 'Tap an object to select it. Drag empty space to orbit.';
   }
   hasBuffer(file: string) { return this.buffers.has(file); }
+  // Every object that shares this one's group name, or just the object when it has none.
+  groupOf(o: any): any[] { return o && o.group ? this.data.objects.filter((x: any) => x.group === o.group) : o ? [o] : []; }
 
   // ----- viewport lifecycle -----
   // Starts the 3D runtime on the canvas. Returns the function that shuts it down.
@@ -88,13 +93,34 @@ export class EditorStore {
       this.tc = new TransformControls(this.rt.camera, canvas);
       // Bigger handles where the pointer is a finger.
       this.tc.setSize(window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? 1.9 : 1.1);
-      this.tc.addEventListener('dragging-changed', (e: any) => { this.rt.lock = e.value; if (!e.value) this.commit(); });
+      // Where the dragged object and the rest of its group stood when the drag began.
+      let startInv: THREE.Matrix4 | null = null, mates: { o: any; m: THREE.Matrix4 }[] = [];
+      const rad = THREE.MathUtils.degToRad, deg = THREE.MathUtils.radToDeg;
+      const matrixOf = (o: any) => new THREE.Matrix4().compose(
+        new THREE.Vector3().fromArray(o.pos), new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(o.rot[0]), rad(o.rot[1]), rad(o.rot[2]))), new THREE.Vector3().fromArray(o.scale));
+      this.tc.addEventListener('dragging-changed', (e: any) => {
+        this.rt.lock = e.value;
+        const o = this.selectedObject;
+        if (e.value && o) { startInv = matrixOf(o).invert(); mates = this.wholeGroup ? this.groupOf(o).filter((x: any) => x !== o).map((x: any) => ({ o: x, m: matrixOf(x) })) : []; }
+        if (!e.value) { startInv = null; mates = []; this.commit(); }
+      });
       this.tc.addEventListener('objectChange', () => {
         const o = this.selectedObject, root = this.rt.get(this.selected);
         if (!o || !root) return;
         o.pos = root.position.toArray().map(r3);
-        o.rot = [root.rotation.x, root.rotation.y, root.rotation.z].map((v: number) => +THREE.MathUtils.radToDeg(v).toFixed(1));
+        o.rot = [root.rotation.x, root.rotation.y, root.rotation.z].map((v: number) => +deg(v).toFixed(1));
         o.scale = root.scale.toArray().map((v: number) => +Math.max(0.05, Math.abs(v)).toFixed(3));
+        if (!startInv || !mates.length) return;
+        // The same move, turn or resize, applied to every other part around the dragged one.
+        root.updateMatrix();
+        const delta = root.matrix.clone().multiply(startInv), p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), eu = new THREE.Euler();
+        mates.forEach(({ o: x, m }) => {
+          delta.clone().multiply(m).decompose(p, q, sc);
+          eu.setFromQuaternion(q);
+          x.pos = p.toArray().map(r3);
+          x.rot = [eu.x, eu.y, eu.z].map((v) => +deg(v).toFixed(1));
+          x.scale = sc.toArray().map((v) => +Math.max(0.05, Math.abs(v)).toFixed(3));
+        });
       });
       this.rt.scene.add(this.tc.getHelper());
       this.attach();
@@ -232,6 +258,29 @@ export class EditorStore {
     this.data.objects.push(o);
     this.selected = o.id;
     this.commit();
+  }
+  setWholeGroup(on: boolean) { this.wholeGroup = on; this.emit(); }
+  removeGroup(name: string) {
+    this.data.objects = this.data.objects.filter((o: any) => o.group !== name);
+    this.commit();
+  }
+  // Copies every part of a group, keeping the clicks between its parts pointing at the copies.
+  duplicateGroup(name: string) {
+    const parts = this.data.objects.filter((o: any) => o.group === name);
+    if (!parts.length) return;
+    const taken = new Set(this.data.objects.map((o: any) => o.group));
+    let label = (name + ' copy').slice(0, 30);
+    for (let n = 2; taken.has(label); n++) label = (name.slice(0, 22) + ' copy ' + n);
+    const ids = new Map<string, string>(parts.map((o: any) => [o.id, uid()]));
+    parts.forEach((src: any) => {
+      const o = clone(src);
+      o.id = ids.get(src.id); o.group = label; o.pos = [r3(o.pos[0] + 0.8), o.pos[1], r3(o.pos[2] + 0.8)];
+      if (o.click && ids.has(o.click.target)) o.click.target = ids.get(o.click.target);
+      (o.keys || []).forEach((k: any) => { k.pos = [r3(k.pos[0] + 0.8), k.pos[1], r3(k.pos[2] + 0.8)]; });
+      this.data.objects.push(o);
+    });
+    this.selected = ids.get(parts[0].id) || null;
+    this.commit('Copied ' + name + '.');
   }
   async importFile(file: File) {
     // Storage keys allow a limited set of characters, so the stored name is a cleaned copy.

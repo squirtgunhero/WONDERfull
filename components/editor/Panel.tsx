@@ -50,6 +50,24 @@ function DescribeTab({ store }: { store: EditorStore }) {
 }
 
 function ObjectsTab({ store }: { store: EditorStore }) {
+  // Grouped objects are listed together under their group's name, in the order groups first appear.
+  const entries: { group: string; parts: any[] }[] = [];
+  store.data.objects.forEach((o: any) => {
+    const at = o.group ? entries.find((e) => e.group === o.group) : null;
+    if (at) at.parts.push(o); else entries.push({ group: o.group || '', parts: [o] });
+  });
+  const row = (o: any) => {
+    const missing = o.type === 'model' && !store.hasBuffer(o.file);
+    return (
+      <div className={'item' + (o.id === store.selected ? ' sel' : '')} key={o.id}>
+        <button type="button" className="name" onClick={() => store.select(o.id, true)}>
+          {labelOf(o)}<small>{missing ? 'file not loaded, import it again' : names[o.type]}</small>
+        </button>
+        <button type="button" className="mini" aria-label={'Duplicate ' + labelOf(o)} onClick={() => store.duplicate(o.id)}>Copy</button>
+        <button type="button" className="mini" aria-label={'Delete ' + labelOf(o)} onClick={() => store.removeObject(o.id)}>Delete</button>
+      </div>
+    );
+  };
   return (
     <>
       <h2>Add</h2>
@@ -63,18 +81,16 @@ function ObjectsTab({ store }: { store: EditorStore }) {
       </div>
       <h2>In this scene</h2>
       <div className="list">
-        {store.data.objects.map((o: any) => {
-          const missing = o.type === 'model' && !store.hasBuffer(o.file);
-          return (
-            <div className={'item' + (o.id === store.selected ? ' sel' : '')} key={o.id}>
-              <button type="button" className="name" onClick={() => store.select(o.id, true)}>
-                {labelOf(o)}<small>{missing ? 'file not loaded, import it again' : names[o.type]}</small>
-              </button>
-              <button type="button" className="mini" aria-label={'Duplicate ' + labelOf(o)} onClick={() => store.duplicate(o.id)}>Copy</button>
-              <button type="button" className="mini" aria-label={'Delete ' + labelOf(o)} onClick={() => store.removeObject(o.id)}>Delete</button>
+        {entries.map((e) => (e.group ? (
+          <div className="grp" key={'g:' + e.group}>
+            <div className="item ghead">
+              <span className="name">{e.group}<small>{e.parts.length} {e.parts.length === 1 ? 'part' : 'parts'}</small></span>
+              <button type="button" className="mini" aria-label={'Duplicate group ' + e.group} onClick={() => store.duplicateGroup(e.group)}>Copy</button>
+              <button type="button" className="mini" aria-label={'Delete group ' + e.group} onClick={() => store.removeGroup(e.group)}>Delete</button>
             </div>
-          );
-        })}
+            {e.parts.map(row)}
+          </div>
+        ) : row(e.parts[0])))}
         {!store.data.objects.length && <p className="note">The scene is empty. Add a shape above.</p>}
       </div>
     </>
@@ -86,6 +102,12 @@ function SelectedTab({ store }: { store: EditorStore }) {
   if (!o) return <p className="note">Nothing is selected. Tap an object in the scene, or pick one from the Objects tab.</p>;
   return (
     <>
+      {o.group && (
+        <label className="grpcheck" htmlFor="wholeGroup">
+          <input type="checkbox" id="wholeGroup" checked={store.wholeGroup} onChange={(e) => store.setWholeGroup(e.target.checked)} />
+          The handles move all of {o.group} ({store.groupOf(o).length} parts)
+        </label>
+      )}
       <Fields prefix="o" target={o} defs={objectDefs(o, store.data)} onChange={() => store.commit()} />
       <p className="note">States, loops and scroll run in Play mode.</p>
     </>

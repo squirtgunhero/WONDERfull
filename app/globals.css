@@ -183,6 +183,12 @@ textarea.say:disabled { opacity: 0.6; }
 .item .name small { color: var(--ink-3); font-weight: 400; margin-left: 8px; font-size: 12.5px; }
 .item:hover { background: var(--fill); }
 .item:hover .name { background: none; border-color: transparent; }
+.grp { display: flex; flex-direction: column; gap: 2px; }
+.grp > .item:not(.ghead) { margin-left: 14px; }
+.item.ghead .name { display: flex; align-items: baseline; padding: 9px 10px; font-weight: 600; font-size: 13.5px; min-width: 0; }
+.item.ghead:hover { background: none; }
+label.grpcheck { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+label.grpcheck input { margin-top: 2px; }
 .item.sel { background: var(--accent-soft); }
 .item.sel .name { color: var(--accent); font-weight: 600; }
 .item .mini { border-color: transparent; background: none; color: var(--ink-3); padding: 8px; font-size: 12.5px; }
