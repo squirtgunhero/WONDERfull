@@ -4,7 +4,7 @@ import { supabase } from '../cloud';
 
 export type Built = { scene: any; name: string; summary: string; used?: number; limit?: number };
 
-export async function describeScene(prompt: string, scene?: any, selected?: string | null): Promise<Built> {
+export async function describeScene(prompt: string, scene?: any, selected?: string | null, earlier?: string[]): Promise<Built> {
   const { data } = await supabase().auth.getSession();
   if (!data.session) throw new Error('Sign in to build from a description. You can do that from All scenes.');
   let res: Response;
@@ -12,7 +12,7 @@ export async function describeScene(prompt: string, scene?: any, selected?: stri
     res = await fetch('/api/build', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + data.session.access_token },
-      body: JSON.stringify({ prompt, scene, selected: selected || undefined }),
+      body: JSON.stringify({ prompt, scene, selected: selected || undefined, earlier: earlier && earlier.length ? earlier : undefined }),
     });
   } catch (e) {
     throw new Error('The request did not get through. Check your connection and try again.');

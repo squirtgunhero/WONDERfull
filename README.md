@@ -63,6 +63,8 @@ it changes the open scene as one step that Undo reverses. With an object selecte
   day for the whole site, counted in UTC. Change the two numbers in the migration to move them.
 - The model never writes to the scene directly. Its reply goes through `lib/ai/sanitize.js` first.
   It cannot create imported models; it can keep, move and resize the ones a scene already has.
+- In the editor, the last few requests of the session travel with each new one, so follow-ups like
+  "a bit warmer" have context.
 
 ## Known limits
 
