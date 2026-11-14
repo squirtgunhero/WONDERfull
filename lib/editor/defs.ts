@@ -54,6 +54,7 @@ const eventDefs = (me: any, data: any): FieldDef[] => [
 export const objectDefs = (me: any, data: any): FieldDef[] => [
   { h: 'Object' },
   { k: 'name', label: 'Name', type: 'text', max: 30 },
+  { k: 'group', label: 'Group', type: 'text', max: 30, ph: 'None' },
   { k: 'text', label: 'Text', type: 'text', max: 28, show: (o: any) => o.type === 'text' || o.type === 'text3d' },
   { k: 'depth', label: 'Depth', type: 'range', min: 0.02, max: 1.5, step: 0.01, def: 0.25, show: (o: any) => o.type === 'text3d' },
   { k: 'bevel', label: 'Bevel', type: 'range', min: 0, max: 0.12, step: 0.005, def: 0.03, show: (o: any) => o.type === 'text3d' },

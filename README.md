@@ -50,6 +50,12 @@ npm run dev        # http://localhost:3000
 - After deploying, set the Site URL in Supabase (Authentication settings) to the deployed address,
   so the links in confirmation emails come back to the app.
 
+## Groups
+
+Objects that share a Group name (set in the Selected tab) are one thing made of parts. They are
+listed together, the handles move, turn and resize all of them at once unless that is switched
+off, and a group can be copied or deleted whole. Described builds group their own parts.
+
 ## Building from a description
 
 Type what you want on the scene list ("Describe a scene") or in the editor's Describe tab, where

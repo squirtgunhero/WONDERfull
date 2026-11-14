@@ -167,3 +167,11 @@ test('lights are kept within limits and earlier requests travel with an edit', a
   await runBuild({ prompt: 'warmer', scene: { objects: [{ id: 'a', type: 'box' }] }, earlier: ['add a lamp', 7, 'make it night'] }, deps({ ask }));
   assert.match(sent, /oldest first, already applied:\n- add a lamp\n- make it night\n/);
 });
+
+test('group names survive cleaning and the short form', () => {
+  const s = sanitizeScene({ objects: [{ id: 't1', type: 'cylinder', group: '  Tree  ' }, { id: 't2', type: 'sphere', group: 'Tree' }, { id: 'f', type: 'box', group: 7 }] });
+  assert.deepEqual(s.objects.map((o) => o.group), ['Tree', 'Tree', '']);
+  const c = compactScene(s);
+  assert.equal(c.objects[0].group, 'Tree');
+  assert.equal('group' in c.objects[2], false);
+});
