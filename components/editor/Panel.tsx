@@ -142,7 +142,29 @@ function SceneTab({ store }: { store: EditorStore }) {
   return (
     <>
       <Fields prefix="s" target={store.data} defs={sceneDefs} onChange={() => store.commit()} />
-      <p className="note">The camera on the live page is the view you leave the viewport in while editing.</p>
+      <p className="note">The camera on the live page is the view you leave the viewport in while editing, unless a saved camera is set to start.</p>
+      <h2>Cameras</h2>
+      <div className="list">
+        {store.data.cameras.map((c: any) => (
+          <div className="item cam" key={c.id}>
+            <input type="text" aria-label="Camera name" value={c.name} maxLength={30} onChange={(e) => { c.name = e.target.value; store.commit(); }} />
+            <button type="button" className="mini" aria-label={'Look through ' + c.name} onClick={() => store.goCamera(c.id)}>Go</button>
+            <button type="button" className="mini" aria-label={'Store the current view in ' + c.name} onClick={() => store.updateCamera(c.id)}>Update</button>
+            <button type="button" className="mini" aria-label={'Delete ' + c.name} onClick={() => store.removeCamera(c.id)}>Delete</button>
+          </div>
+        ))}
+      </div>
+      <div className="chips"><button type="button" id="addCamera" onClick={() => store.addCamera()}>Save this view as a camera</button></div>
+      {store.data.cameras.length > 0 && (
+        <div className="row">
+          <label htmlFor="playCam">Starts on</label>
+          <select id="playCam" value={store.data.playCam} onChange={(e) => { store.data.playCam = e.target.value; store.commit(); }}>
+            <option value="">The editing view</option>
+            {store.data.cameras.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      )}
+      <p className="note">A clickable object can move the view to a saved camera. Set that under Click in the Selected tab.</p>
       <h2>Scenes</h2>
       <div className="chips">
         {templates.map(([label, make]) => (

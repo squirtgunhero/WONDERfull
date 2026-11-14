@@ -186,6 +186,8 @@ textarea.say:disabled { opacity: 0.6; }
 .item .name small { color: var(--ink-3); font-weight: 400; margin-left: 8px; font-size: 12.5px; }
 .item:hover { background: var(--fill); }
 .item:hover .name { background: none; border-color: transparent; }
+.item.cam { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.item.cam input { min-width: 0; }
 .grp { display: flex; flex-direction: column; gap: 2px; }
 .grp > .item:not(.ghead) { margin-left: 14px; }
 .item.ghead .name { display: flex; align-items: baseline; padding: 9px 10px; font-weight: 600; font-size: 13.5px; min-width: 0; }
