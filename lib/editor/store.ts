@@ -344,6 +344,35 @@ export class EditorStore {
     }
   }
 
+  // ----- cameras -----
+  private view() { return { pos: this.rt.camera.position.toArray().map(r3), target: this.rt.controls.target.toArray().map(r3) }; }
+  addCamera() {
+    if (!this.rt) return;
+    const n = this.data.cameras.length + 1;
+    this.data.cameras.push({ id: uid(), name: 'Camera ' + n, ...this.view() });
+    this.commit('Saved this view as Camera ' + n + '.');
+  }
+  updateCamera(id: string) {
+    const c = this.data.cameras.find((x: any) => x.id === id);
+    if (!c || !this.rt) return;
+    Object.assign(c, this.view());
+    this.commit(c.name + ' now holds this view.');
+  }
+  goCamera(id: string) {
+    const c = this.data.cameras.find((x: any) => x.id === id);
+    if (!c || !this.rt) return;
+    if (this.mode !== 'edit') this.setMode('edit');
+    this.data.camera = { pos: c.pos.slice(), target: c.target.slice() };
+    this.rt.setView(this.data.camera);
+    this.commit('Looking through ' + c.name + '.');
+  }
+  removeCamera(id: string) {
+    this.data.cameras = this.data.cameras.filter((x: any) => x.id !== id);
+    if (this.data.playCam === id) this.data.playCam = '';
+    this.data.objects.forEach((o: any) => { if (o.click.cam === id) o.click.cam = ''; });
+    this.commit();
+  }
+
   // ----- page sections -----
   addSection() {
     const n = this.data.sections.length, start = Math.min(0.9, n * 0.34);

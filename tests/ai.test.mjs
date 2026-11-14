@@ -175,3 +175,26 @@ test('group names survive cleaning and the short form', () => {
   assert.equal(c.objects[0].group, 'Tree');
   assert.equal('group' in c.objects[2], false);
 });
+
+test('look settings and saved cameras are cleaned and kept through an edit', () => {
+  const s = sanitizeScene({
+    ao: 4, fog: { on: true, color: 'mist', near: 30, far: 3 }, sky: { on: 'yes', top: '#123' }, grade: { exposure: 9, vignette: 0.4, tint: '#FFEEDD' },
+    cameras: [{ id: 'wide', name: 'Wide', pos: [0, 2, 9], target: [0, 1, 0] }, { id: 'wide' }, { id: 'bad id' }, { id: 'close', pos: [0, 1, 3] }],
+    playCam: 'close',
+    objects: [{ id: 'a', type: 'sphere', mat: { glass: 1, bend: 9, rainbow: 0.5 }, click: { on: true, action: 'camera', cam: 'close' } }, { id: 'b', type: 'box', click: { on: true, action: 'camera', cam: 'nowhere' } }],
+  });
+  assert.equal(s.ao, 1);
+  assert.deepEqual(s.fog, { on: true, color: '#cfd6e4', near: 30, far: 30.5 });
+  assert.deepEqual(s.sky, { on: false, top: '#112233', bottom: '#e6eeff' });
+  assert.equal(s.grade.exposure, 2.5);
+  assert.equal(s.grade.tint, '#ffeedd');
+  assert.deepEqual(s.cameras.map((c) => c.id + ':' + c.name), ['wide:Wide', 'close:Camera 2']);
+  assert.equal(s.playCam, 'close');
+  assert.equal(s.objects[0].mat.bend, 3);
+  assert.equal(s.objects[0].click.cam, 'close');
+  assert.equal(s.objects[1].click.action, 'toggle', 'a camera click with no camera falls back');
+  const kept = sanitizeScene({ objects: [{ id: 'a', type: 'sphere' }] }, s);
+  assert.equal(kept.fog.on, true);
+  assert.equal(kept.cameras.length, 2);
+  assert.equal(kept.playCam, 'close');
+});
