@@ -67,6 +67,20 @@ const LESSONS: Lesson[] = [
     'In the Objects tab, a group can be copied or deleted whole.',
     'Ready-made drops in a finished object, such as a desk lamp or a trophy, as its own group.',
   ] },
+  { id: 'shapes', title: 'Draw, cut and repeat shapes', about: 'Go beyond the ready shapes.', steps: [
+    'Add a Drawn shape. In the Selected tab, tap the pad to add corners and drag them to change the outline.',
+    'Round the corners into curves turns a rough outline into a smooth one. Depth sets its thickness.',
+    'To cut a hole, select the object, and under Cut away pick the object to carve out of it. Move the cutting object to change the cut.',
+    'Under Copies, repeat an object in a grid or around a ring.',
+    'Shading set to Cartoon with an Outline gives a drawn look. 3D text has six typefaces.',
+  ] },
+  { id: 'variables', title: 'Variables, live data and games', about: 'Give the scene a memory and let visitors play.', steps: [
+    'In the Scene tab, add a variable such as score. Write {score} in any text to show it.',
+    'Give an object a click that changes the variable: add to it, set it, or flip it on and off.',
+    'Shown when makes an object appear only while a variable is on.',
+    'A variable can read a live value from a web address that returns JSON. A click can also send a webhook.',
+    'Set Player moves it on an object for arrow key, WASD and touch pad control. Camera follows keeps it in view.',
+  ] },
   { id: 'publish', title: 'Publish, embed and export code', about: 'Put the scene in front of people.', steps: [
     'Sign in so the scene is saved to your account, then press Publish in the editor.',
     'Open live page is the link to share.',

@@ -226,3 +226,37 @@ test('every library template is a valid scene that the cleaner leaves whole', ()
   }
   for (const [label, make] of PARTS) assert.ok(make().every((o) => o.group === label), label + ' parts share a group');
 });
+
+test('drawn shapes, copies, cuts, variables and controls are cleaned', () => {
+  const current = { camera: { pos: [0, 1, 5], target: [0, 0, 0] }, vars: [{ id: 'v1', name: 'price', kind: 'number', value: 1, src: { url: 'https://api.example.com/p', path: 'data.usd', every: 10 } }],
+    objects: [{ id: 'bell', type: 'box', click: { on: true, action: 'hook', url: 'https://hooks.example.com/x' } }] };
+  const s = sanitizeScene({
+    followCam: 'hero',
+    vars: [{ id: 'v1', name: 'price', kind: 'number', value: 5, src: { url: 'https://evil.example/steal' } }, { id: 'v2', name: 'score', kind: 'number', value: 'x' }, { name: '9bad' }, { name: 'score' }],
+    objects: [
+      { id: 'leaf', type: 'shape', pts: [[0, 9], [1, 0], 'x', [-1, 0]], smooth: true, depth: 0.1, mat: { style: 'toon', outline: 3 } },
+      { id: 'flat', type: 'shape', pts: [[0, 0]] },
+      { id: 'wall', type: 'box', cuts: ['hole', 'hole', 'wall', 'ghost'], clone: { kind: 'grid', nx: 99, gap: 0 }, showIf: 'score', click: { on: true, action: 'var', var: 'score', op: 'add', val: 1 } },
+      { id: 'hole', type: 'box', cuts: ['leaf'], showIf: 'nothing' },
+      { id: 'hero', type: 'capsule', control: 'walk', speed: 99, body: 'falls' },
+      { id: 'word', type: 'text3d', text: 'Score {score}', font: 'comic' },
+      { id: 'bell', type: 'box', click: { on: true, action: 'hook', url: 'https://hooks.example.com/x' } },
+      { id: 'sneak', type: 'box', click: { on: true, action: 'hook', url: 'https://evil.example/hook' } },
+    ],
+  }, current);
+  const by = Object.fromEntries(s.objects.map((o) => [o.id, o]));
+  assert.deepEqual(by.leaf.pts, [[0, 3], [1, 0], [-1, 0]]);
+  assert.deepEqual([by.leaf.smooth, by.leaf.mat.style, by.leaf.mat.outline], [true, 'toon', 1]);
+  assert.equal(by.flat.pts.length, 5, 'too few corners falls back to a starter outline');
+  assert.deepEqual(by.wall.cuts, ['hole']);
+  assert.deepEqual([by.hole.cutter, by.hole.cuts, by.wall.cutter], [true, [], false], 'a cutting tool cannot itself be cut');
+  assert.deepEqual([by.wall.clone.nx, by.wall.clone.gap, by.wall.showIf, by.hole.showIf], [12, 0.2, 'score', '']);
+  assert.deepEqual([by.wall.click.action, by.wall.click.var], ['var', 'score']);
+  assert.deepEqual([by.hero.control, by.hero.speed, s.followCam], ['walk', 10, 'hero']);
+  assert.equal(by.word.font, 'righteous');
+  assert.deepEqual(s.vars.map((v) => v.name + '=' + v.value), ['price=5', 'score=0']);
+  assert.equal(s.vars[0].src.url, 'https://api.example.com/p', 'a live address stays the person\'s own');
+  assert.equal(s.vars[1].src.url, '');
+  assert.equal(by.bell.click.action, 'hook');
+  assert.deepEqual([by.sneak.click.action, by.sneak.click.url], ['toggle', ''], 'the model cannot add a webhook');
+});

@@ -56,7 +56,7 @@ export async function saveProject(p: Project): Promise<void> {
     .eq('id', p.id).select('id'));
 }
 
-const TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' };
+const TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
 async function assetNames(projectId: string): Promise<string[]> {
   const files = check(await supabase().storage.from('assets').list(projectId, { limit: 200 }));
   return (files || []).map((f) => f.name);
