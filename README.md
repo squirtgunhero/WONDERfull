@@ -50,6 +50,15 @@ npm run dev        # http://localhost:3000
 - After deploying, set the Site URL in Supabase (Authentication settings) to the deployed address,
   so the links in confirmation emails come back to the app.
 
+## Look, cameras, physics and code
+
+- Scene tab: sky, fog, ambient shadows, color controls, saved cameras and gravity.
+- Selected tab: glass that bends light, saved materials and colors, and physics per object
+  ("Falls and collides" or "Solid"). Physics runs in Play and on live pages.
+- Pictures (PNG, JPG, WebP, GIF, SVG) import as flat cards next to GLB models.
+- Export tab, Code: an HTML or React snippet that runs the scene on any page through
+  `/wonderfull-runtime.js`, which `scripts/build-embed.mjs` bundles from `lib/embed.js` before each build.
+
 ## Groups
 
 Objects that share a Group name (set in the Selected tab) are one thing made of parts. They are

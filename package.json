@@ -6,13 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "prebuild": "node scripts/build-embed.mjs",
+    "predev": "node scripts/build-embed.mjs"
   },
   "dependencies": {
     "@fontsource-variable/anybody": "^5.3.0",
     "@fontsource-variable/onest": "^5.3.1",
     "@fontsource/righteous": "^5.3.0",
     "@supabase/supabase-js": "^2.119.0",
+    "cannon-es": "^0.20.0",
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -23,6 +26,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.187.0",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   },
   "type": "module"

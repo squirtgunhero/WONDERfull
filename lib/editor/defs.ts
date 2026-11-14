@@ -18,6 +18,8 @@ export type FieldDef = {
 
 const notModel = (o: any) => o.type !== 'model';
 const solid = (o: any) => o.type !== 'model' && o.type !== 'particles' && o.type !== 'light';
+const shaped = (o: any) => solid(o) && o.type !== 'text' && o.type !== 'image';
+const canCollide = (o: any) => o.type !== 'particles' && o.type !== 'light' && o.type !== 'cord';
 const shines = (o: any) => o.type !== 'model' && o.type !== 'light';
 const stateLook = (s: string): FieldDef[] => {
   const vis = (o: any) => s !== 'hover' || o.hover.on;
@@ -79,18 +81,23 @@ export const objectDefs = (me: any, data: any): FieldDef[] => [
   { k: 'mat.color', label: 'Color', type: 'color', show: notModel },
   { k: 'mat.roughness', label: 'Roughness', type: 'range', min: 0, max: 1, step: 0.01, show: solid },
   { k: 'mat.metalness', label: 'Metal', type: 'range', min: 0, max: 1, step: 0.01, show: solid },
-  { k: 'mat.surface', label: 'Surface', type: 'select', options: [['none', 'Smooth'], ['brick', 'Brick'], ['plaster', 'Plaster'], ['ribbed', 'Ribbed']], show: (o: any) => solid(o) && o.type !== 'text' },
-  { k: 'mat.texScale', label: 'Texture size', type: 'range', min: 0.1, max: 3, step: 0.05, def: 1, show: (o: any) => solid(o) && o.mat.surface && o.mat.surface !== 'none' },
+  { k: 'mat.surface', label: 'Surface', type: 'select', options: [['none', 'Smooth'], ['brick', 'Brick'], ['plaster', 'Plaster'], ['ribbed', 'Ribbed']], show: shaped },
+  { k: 'mat.texScale', label: 'Texture size', type: 'range', min: 0.1, max: 3, step: 0.05, def: 1, show: (o: any) => shaped(o) && o.mat.surface && o.mat.surface !== 'none' },
   { k: 'mat.glow', label: 'Glow', type: 'range', min: 0, max: 3, step: 0.05, show: shines },
   { k: 'mat.opacity', label: 'Opacity', type: 'range', min: 0.05, max: 1, step: 0.01, show: shines },
-  { k: 'mat.glass', label: 'Glass', type: 'range', min: 0, max: 1, step: 0.01, show: (o: any) => solid(o) && o.type !== 'text' },
-  { k: 'mat.bend', label: 'Bends light', type: 'range', min: 0, max: 3, step: 0.05, def: 1, show: (o: any) => solid(o) && o.type !== 'text' && o.mat.glass > 0 },
-  { k: 'mat.rainbow', label: 'Rainbow sheen', type: 'range', min: 0, max: 1, step: 0.01, def: 0, show: (o: any) => solid(o) && o.type !== 'text' },
+  { k: 'mat.glass', label: 'Glass', type: 'range', min: 0, max: 1, step: 0.01, show: shaped },
+  { k: 'mat.bend', label: 'Bends light', type: 'range', min: 0, max: 3, step: 0.05, def: 1, show: (o: any) => shaped(o) && o.mat.glass > 0 },
+  { k: 'mat.rainbow', label: 'Rainbow sheen', type: 'range', min: 0, max: 1, step: 0.01, def: 0, show: shaped },
   { h: 'Motion' },
   { k: 'anim.kind', label: 'Loop', type: 'select', options: [['none', 'None'], ['float', 'Float'], ['spin', 'Spin'], ['wobble', 'Wobble'], ['pulse', 'Pulse'], ['flicker', 'Flicker on (glow)']] },
   { k: 'anim.speed', label: 'Speed', type: 'range', min: 0.1, max: 3, step: 0.05, show: (o: any) => o.anim.kind !== 'none' },
   { k: 'anim.amount', label: 'Amount', type: 'range', min: 0, max: 2, step: 0.05, show: (o: any) => o.anim.kind !== 'none' },
   { k: 'follow', label: 'Follow cursor', type: 'range', min: 0, max: 1, step: 0.05 },
+  { h: 'Physics', show: canCollide },
+  { k: 'body', label: 'In Play', type: 'select', options: [['none', 'Stays where it is'], ['falls', 'Falls and collides'], ['solid', 'Solid, things land on it']], show: canCollide },
+  { k: 'bounce', label: 'Bounce', type: 'range', min: 0, max: 1, step: 0.05, def: 0.3, show: (o: any) => canCollide(o) && o.body !== 'none' },
+  { k: 'weight', label: 'Weight', type: 'range', min: 0.1, max: 10, step: 0.1, def: 1, show: (o: any) => canCollide(o) && o.body === 'falls' },
+  { note: 'Falling objects land on the floor and on solid objects. Tap one in Play to give it a shove.', show: (o: any) => canCollide(o) && o.body !== 'none' },
   ...eventDefs(me, data),
 ];
 export const sectionDefs: FieldDef[] = [
@@ -137,7 +144,9 @@ export const sceneDefs: FieldDef[] = [
   { k: 'scrollCam.orbit', label: 'Orbit', type: 'range', min: -180, max: 180, step: 5, int: true, show: (d: any) => d.scrollCam.on },
   { k: 'scrollCam.zoom', label: 'Distance', type: 'range', min: 0.4, max: 2.5, step: 0.01, show: (d: any) => d.scrollCam.on },
   { k: 'scrollCam.rise', label: 'Rise', type: 'range', min: -3, max: 3, step: 0.05, show: (d: any) => d.scrollCam.on },
-  { k: 'scrollLen', label: 'Scroll length', type: 'range', min: 1.5, max: 6, step: 0.5 }
+  { k: 'scrollLen', label: 'Scroll length', type: 'range', min: 1.5, max: 6, step: 0.5 },
+  { h: 'Physics' },
+  { k: 'gravity', label: 'Gravity', type: 'range', min: 0, max: 25, step: 0.1, def: 9.8 }
 ];
 
 export const timelineDefs: FieldDef[] = [

@@ -63,6 +63,7 @@ test('an edit keeps imported models, untouched settings and page text', () => {
   assert.equal(s.sections.length, 3);
   assert.equal(s.page.accent, current.page.accent);
   assert.deepEqual(s.objects.map((o) => o.id), ['puppet', 'j1']);
+  assert.equal(sanitizeScene({ objects: [{ id: 'puppet', type: 'image' }] }, current).objects.length, 0, 'a model cannot be turned into a picture');
   assert.equal(s.objects[0].file, 'puppet.glb', 'the file always comes from the current scene');
   assert.deepEqual(s.objects[0].pos, [1, 0, 0]);
 });
@@ -197,4 +198,14 @@ test('look settings and saved cameras are cleaned and kept through an edit', () 
   assert.equal(kept.fog.on, true);
   assert.equal(kept.cameras.length, 2);
   assert.equal(kept.playCam, 'close');
+});
+
+test('physics settings are cleaned and saved materials stay the person\'s own', () => {
+  const current = { camera: { pos: [0, 1, 5], target: [0, 0, 0] }, objects: [], palette: ['#ABCDEF', 'nope'], swatches: [{ id: 'm1', name: 'Chrome', mat: { color: '#cccccc', metalness: 1, extra: 1 } }] };
+  const s = sanitizeScene({ gravity: 99, palette: ['#000000'], swatches: [], objects: [{ id: 'a', type: 'sphere', body: 'falls', bounce: 7, weight: 0 }, { id: 'b', type: 'box', body: 'liquid' }] }, current);
+  assert.equal(s.gravity, 25);
+  assert.deepEqual([s.objects[0].body, s.objects[0].bounce, s.objects[0].weight, s.objects[1].body], ['falls', 1, 0.1, 'none']);
+  assert.deepEqual(s.palette, ['#abcdef']);
+  assert.equal(s.swatches[0].mat.metalness, 1);
+  assert.equal(s.swatches[0].mat.extra, undefined);
 });
