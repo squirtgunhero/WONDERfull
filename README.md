@@ -59,6 +59,16 @@ npm run dev        # http://localhost:3000
 - Export tab, Code: an HTML or React snippet that runs the scene on any page through
   `/wonderfull-runtime.js`, which `scripts/build-embed.mjs` bundles from `lib/embed.js` before each build.
 
+## Shapes, logic and play
+
+- Drawn shapes (an outline pad in the Selected tab), cutting one object out of another
+  (`three-bvh-csg`), copies in a grid or ring, cartoon shading with outlines, six typefaces for
+  3D text (`lib/fonts`, made by `scripts/make-fonts.mjs` from open-licensed fonts), and video cards.
+- Variables shown in text with `{name}`, changed by clicks, optionally read from a web address;
+  objects shown only while a variable is on; clicks that send a webhook.
+- Player control with arrow keys, WASD or a touch pad, and a camera that follows an object.
+- A described build cannot add a webhook or a live data address. Those stay the person's own settings.
+
 ## Templates and lessons
 
 - `lib/templates.js` holds the template library (scenes, objects, motion) and the ready-made

@@ -251,6 +251,7 @@ export class EditorStore {
     if (type === 'text' || type === 'text3d') { o.text = 'Your words'; o.mat.color = '#143b29'; }
     if (type === 'text3d') { o.depth = 0.25; o.bevel = 0.03; }
     if (type === 'cord') { o.pos = [0, 2, 0.6]; o.to = [1, -1.5, 0]; o.slack = 0.4; o.thick = 0.02; o.mat.color = '#161616'; }
+    if (type === 'shape') { o.pos = [0, 1, 0.6]; o.pts = [[0, 0.7], [0.66, 0.22], [0.41, -0.57], [-0.41, -0.57], [-0.66, 0.22]]; o.smooth = false; o.depth = 0.25; }
     if (type === 'light') { o.pos = [0, 2, 0.6]; o.power = 8; o.reach = 8; o.mat.color = '#ffd9a0'; }
     if (type === 'particles') { o.pos = [0, 1.3, 0]; o.count = 200; o.spread = 3; o.speed = 0.4; o.psize = 0.11; o.mat.color = '#ff4f2e'; }
     this.data.objects.push(o);
@@ -260,6 +261,8 @@ export class EditorStore {
   }
   removeObject(id: string) {
     this.data.objects = this.data.objects.filter((o: any) => o.id !== id);
+    this.data.objects.forEach((o: any) => { o.cuts = o.cuts.filter((c: string) => c !== id); });
+    if (this.data.followCam === id) this.data.followCam = '';
     this.commit();
   }
   duplicate(id: string) {
@@ -313,19 +316,21 @@ export class EditorStore {
   async importFile(file: File) {
     // Storage keys allow a limited set of characters, so the stored name is a cleaned copy.
     const name = file.name.replace(/[^A-Za-z0-9._-]/g, '_');
-    const picture = /\.(png|jpe?g|webp|gif|svg)$/i.test(name);
+    const picture = /\.(png|jpe?g|webp|gif|svg)$/i.test(name), film = /\.(mp4|webm|mov)$/i.test(name);
+    if (film && file.size > 25 * 1024 * 1024) { this.say('That video is over 25 MB. Use a shorter or smaller one.'); return; }
     if (picture && file.size > 8 * 1024 * 1024) { this.say('That picture is over 8 MB. Use a smaller one.'); return; }
     let buf: ArrayBuffer;
     try { buf = await file.arrayBuffer(); } catch (e) { this.say('That file could not be read.'); return; }
     this.buffers.set(name, buf);
     this.opts.onAsset(name, buf);
-    const waiting = this.data.objects.filter((o: any) => (o.type === 'model' || o.type === 'image') && o.file === name);
+    const waiting = this.data.objects.filter((o: any) => (o.type === 'model' || o.type === 'image' || o.type === 'video') && o.file === name);
     if (waiting.length) {
       waiting.forEach((o: any) => this.rt && this.rt.rebuild(o));
       this.attach();
       this.say('Reloaded ' + name);
     } else {
-      if (picture) this.addObject('image', { name: name.replace(/\.[^.]+$/, ''), file: name, pos: [0, 1.2, 0.6], mat: { color: '#ffffff', roughness: 0.8 } });
+      if (film) this.addObject('video', { name: name.replace(/\.[^.]+$/, ''), file: name, pos: [0, 1.2, 0.6], mat: { color: '#ffffff', roughness: 0.8 } });
+      else if (picture) this.addObject('image', { name: name.replace(/\.[^.]+$/, ''), file: name, pos: [0, 1.2, 0.6], mat: { color: '#ffffff', roughness: 0.8 } });
       else this.addObject('model', { name: name.replace(/\.[^.]+$/, ''), file: name });
     }
   }
@@ -361,6 +366,44 @@ export class EditorStore {
       this.ai.status = (e && e.message) || 'That did not work. Try again.';
       this.emit();
     }
+  }
+
+  // ----- cutting one shape out of another -----
+  addCut(id: string) {
+    const o = this.selectedObject, c = this.byId(id);
+    if (!o || !c || c === o || o.cuts.includes(id)) return;
+    o.cuts.push(id);
+    c.cutter = true;
+    this.commit(labelOf(c) + ' is now carved out of ' + labelOf(o) + '. Move it to change the cut.');
+  }
+  removeCut(id: string) {
+    const o = this.selectedObject, c = this.byId(id);
+    if (!o) return;
+    o.cuts = o.cuts.filter((x: string) => x !== id);
+    if (c && !this.data.objects.some((x: any) => x.cuts.includes(id))) c.cutter = false;
+    this.commit();
+  }
+
+  // ----- variables -----
+  addVar() {
+    let n = this.data.vars.length + 1;
+    while (this.data.vars.some((v: any) => v.name === 'value' + n)) n++;
+    this.data.vars.push({ id: uid(), name: 'value' + n, kind: 'number', value: 0, src: { url: '', path: '', every: 30 } });
+    this.commit('Added a variable. Put {value' + n + '} in any text to show it.');
+  }
+  renameVar(v: any, name: string) {
+    const clean = name.replace(/[^A-Za-z0-9_]/g, '').replace(/^[^A-Za-z]+/, '').slice(0, 20);
+    if (!clean || this.data.vars.some((x: any) => x !== v && x.name === clean)) return;
+    this.data.objects.forEach((o: any) => { if (o.showIf === v.name) o.showIf = clean; if (o.click.var === v.name) o.click.var = clean; });
+    v.name = clean;
+    this.commit();
+  }
+  removeVar(id: string) {
+    const v = this.data.vars.find((x: any) => x.id === id);
+    if (!v) return;
+    this.data.vars = this.data.vars.filter((x: any) => x.id !== id);
+    this.data.objects.forEach((o: any) => { if (o.showIf === v.name) o.showIf = ''; if (o.click.var === v.name) o.click.var = ''; });
+    this.commit();
   }
 
   // ----- saved materials and colors -----

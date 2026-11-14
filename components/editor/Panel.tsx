@@ -12,7 +12,7 @@ const names = NAMES as Record<string, string>;
 const templates = (LIBRARY as { label: string; make: () => any }[]).map((t) => [t.label, t.make] as [string, () => any]);
 const parts = PARTS as [string, () => any[]][];
 const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
-const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'text3d', 'text', 'particles', 'cord', 'light'];
+const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d', 'text', 'particles', 'cord', 'light'];
 
 const STARTERS = ['A glossy bouncing sphere', '20 cubes in a grid that ripple', 'A desk lamp you can switch on'];
 
@@ -71,7 +71,7 @@ function ObjectsTab({ store }: { store: EditorStore }) {
     if (at) at.parts.push(o); else entries.push({ group: o.group || '', parts: [o] });
   });
   const row = (o: any) => {
-    const missing = (o.type === 'model' || o.type === 'image') && !store.hasBuffer(o.file);
+    const missing = (o.type === 'model' || o.type === 'image' || o.type === 'video') && !store.hasBuffer(o.file);
     return (
       <div className={'item' + (o.id === store.selected ? ' sel' : '')} key={o.id}>
         <button type="button" className="name" onClick={() => store.select(o.id, true)}>
@@ -88,8 +88,8 @@ function ObjectsTab({ store }: { store: EditorStore }) {
       <div className="chips">
         {ADDABLE.map((t) => <button key={t} type="button" onClick={() => store.addObject(t)}>{names[t]}</button>)}
         <label className="filebtn">
-          Import a model or picture
-          <input type="file" id="glbFile" accept=".glb,.gltf,model/gltf-binary,image/png,image/jpeg,image/webp,image/gif,image/svg+xml" aria-label="Import a GLB model or a picture"
+          Import a model, picture or video
+          <input type="file" id="glbFile" accept=".glb,.gltf,model/gltf-binary,image/png,image/jpeg,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime" aria-label="Import a GLB model, a picture or a video"
             onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) store.importFile(f); e.target.value = ''; }} />
         </label>
       </div>
@@ -115,6 +115,56 @@ function ObjectsTab({ store }: { store: EditorStore }) {
   );
 }
 
+const CUTTABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d'];
+
+// A pad for drawing a flat outline: tap empty space to add a corner, drag a corner to move it.
+function ShapePad({ o, store }: { o: any; store: EditorStore }) {
+  const svg = useRef<SVGSVGElement>(null);
+  const [picked, setPicked] = useState(-1);
+  const drag = useRef(-1);
+  const at = (e: React.PointerEvent) => {
+    const r = svg.current!.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 2.6 - 1.3, y = 1.3 - ((e.clientY - r.top) / r.height) * 2.6;
+    return [Math.round(Math.max(-1.25, Math.min(1.25, x)) * 100) / 100, Math.round(Math.max(-1.25, Math.min(1.25, y)) * 100) / 100];
+  };
+  const down = (e: React.PointerEvent) => {
+    const p = at(e), pts: number[][] = o.pts;
+    let hit = pts.findIndex((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.16);
+    if (hit < 0 && pts.length < 32) {
+      // The new corner goes into the edge it is closest to.
+      let best = 0, bestD = Infinity;
+      pts.forEach((a, i) => {
+        const b = pts[(i + 1) % pts.length], dx = b[0] - a[0], dy = b[1] - a[1];
+        const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+        const d = Math.hypot(p[0] - (a[0] + dx * t), p[1] - (a[1] + dy * t));
+        if (d < bestD) { bestD = d; best = i + 1; }
+      });
+      pts.splice(best, 0, p);
+      hit = best;
+      store.commit();
+    }
+    drag.current = hit; setPicked(hit);
+    svg.current!.setPointerCapture(e.pointerId);
+  };
+  const move = (e: React.PointerEvent) => { if (drag.current >= 0 && o.pts[drag.current]) { o.pts[drag.current] = at(e); store.commit(); } };
+  const path = o.pts.map((p: number[], i: number) => (i ? 'L' : 'M') + p[0] + ' ' + -p[1]).join(' ') + ' Z';
+  return (
+    <div className="lib">
+      <h2>Outline</h2>
+      <svg ref={svg} id="shapePad" className="pad" viewBox="-1.3 -1.3 2.6 2.6" role="img" aria-label="Outline of the shape. Tap to add a corner, drag a corner to move it."
+        onPointerDown={down} onPointerMove={move} onPointerUp={() => { drag.current = -1; }}>
+        <path d="M-1.3 0H1.3M0 -1.3V1.3" className="axis" />
+        <path d={path} className="fillp" />
+        {o.pts.map((p: number[], i: number) => <circle key={i} cx={p[0]} cy={-p[1]} r={0.07} className={i === picked ? 'pt on' : 'pt'} />)}
+      </svg>
+      <div className="chips">
+        <button type="button" id="removePoint" disabled={picked < 0 || o.pts.length <= 3} onClick={() => { o.pts.splice(picked, 1); setPicked(-1); store.commit(); }}>Remove the picked corner</button>
+      </div>
+      <p className="note">Tap empty space to add a corner. Drag a corner to move it. Depth and curved corners are below.</p>
+    </div>
+  );
+}
+
 function SelectedTab({ store }: { store: EditorStore }) {
   const o = store.selectedObject;
   if (!o) return <p className="note">Nothing is selected. Tap an object in the scene, or pick one from the Objects tab.</p>;
@@ -126,6 +176,28 @@ function SelectedTab({ store }: { store: EditorStore }) {
           The handles move all of {o.group} ({store.groupOf(o).length} parts)
         </label>
       )}
+      {o.type === 'shape' && <ShapePad o={o} store={store} />}
+      {CUTTABLE.includes(o.type) && !o.cutter && (
+        <div className="lib">
+          <h2>Cut away</h2>
+          <div className="chips">
+            {o.cuts.map((id: string) => { const c = store.byId(id); return c ? (
+              <span className="kchip" key={id}>
+                <button type="button" onClick={() => store.select(id)}>{labelOf(c)}</button>
+                <button type="button" aria-label={'Stop cutting with ' + labelOf(c)} onClick={() => store.removeCut(id)}>✕</button>
+              </span>
+            ) : null; })}
+          </div>
+          <div className="row">
+            <label htmlFor="addCut">Carve out</label>
+            <select id="addCut" value="" onChange={(e) => { if (e.target.value) store.addCut(e.target.value); }}>
+              <option value="">Pick an object to cut out of this one</option>
+              {store.data.objects.filter((x: any) => x.id !== o.id && CUTTABLE.includes(x.type) && !o.cuts.includes(x.id) && !x.cuts.length).map((x: any) => <option key={x.id} value={x.id}>{labelOf(x)}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+      {o.cutter && <p className="note">This object is a cutting tool. It shows as a wire frame while editing and is hidden in Play. Move it to change the cut.</p>}
       {o.type !== 'model' && o.type !== 'light' && (
         <div className="lib">
           <h2>Saved materials</h2>
@@ -195,6 +267,38 @@ function SceneTab({ store }: { store: EditorStore }) {
         </div>
       )}
       <p className="note">A clickable object can move the view to a saved camera. Set that under Click in the Selected tab.</p>
+      <div className="row">
+        <label htmlFor="followCam">Camera follows</label>
+        <select id="followCam" value={store.data.followCam} onChange={(e) => { store.data.followCam = e.target.value; store.commit(); }}>
+          <option value="">Nothing</option>
+          {store.data.objects.map((x: any) => <option key={x.id} value={x.id}>{labelOf(x)}</option>)}
+        </select>
+      </div>
+      <h2>Variables</h2>
+      <p className="note">A variable is a named value the scene keeps while it plays. Write its name in curly braces in any text to show it. Clicks can change it, and objects can appear when it is on.</p>
+      {store.data.vars.map((v: any) => (
+        <div className="group var" key={v.id}>
+          <div className="row"><label htmlFor={'vn-' + v.id}>Name</label><input type="text" id={'vn-' + v.id} defaultValue={v.name} maxLength={20} onBlur={(e) => { store.renameVar(v, e.target.value); e.target.value = v.name; }} /></div>
+          <div className="row"><label htmlFor={'vk-' + v.id}>Holds</label>
+            <select id={'vk-' + v.id} value={v.kind} onChange={(e) => { v.kind = e.target.value; v.value = v.kind === 'number' ? 0 : v.kind === 'toggle' ? false : ''; store.commit(); }}>
+              <option value="number">A number</option><option value="text">Text</option><option value="toggle">On or off</option>
+            </select></div>
+          <div className="row"><label htmlFor={'vv-' + v.id}>Starts as</label>
+            {v.kind === 'toggle'
+              ? <select id={'vv-' + v.id} value={v.value ? 'on' : 'off'} onChange={(e) => { v.value = e.target.value === 'on'; store.commit(); }}><option value="off">Off</option><option value="on">On</option></select>
+              : <input type="text" id={'vv-' + v.id} value={String(v.value)} maxLength={80} inputMode={v.kind === 'number' ? 'decimal' : 'text'} onChange={(e) => { v.value = v.kind === 'number' ? (e.target.value === '' || e.target.value === '-' ? e.target.value : Number(e.target.value) || 0) : e.target.value; store.commit(); }} />}
+          </div>
+          <div className="row"><label htmlFor={'vu-' + v.id}>Live from</label><input type="text" id={'vu-' + v.id} placeholder="https:// address that returns JSON (optional)" value={v.src.url} onChange={(e) => { v.src.url = e.target.value.trim(); store.commit(); }} /></div>
+          {v.src.url && (
+            <>
+              <div className="row"><label htmlFor={'vp-' + v.id}>Field</label><input type="text" id={'vp-' + v.id} placeholder="such as data.price" value={v.src.path} onChange={(e) => { v.src.path = e.target.value.trim(); store.commit(); }} /></div>
+              <p className="note">Read on the live page and in Play, and refreshed every 30 seconds. The address must allow requests from other sites.</p>
+            </>
+          )}
+          <div className="chips"><button type="button" onClick={() => store.removeVar(v.id)}>Remove {v.name}</button></div>
+        </div>
+      ))}
+      <div className="chips"><button type="button" id="addVar" onClick={() => store.addVar()}>Add a variable</button></div>
       <h2>Replace with a template</h2>
       <div className="chips">
         {templates.map(([label, make]) => (
