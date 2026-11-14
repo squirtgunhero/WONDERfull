@@ -12,7 +12,9 @@ const templates = TEMPLATES as [string, () => any][];
 const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
 const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'text3d', 'text', 'particles', 'cord', 'light'];
 
-// Change the scene by saying what you want.
+const STARTERS = ['A glossy bouncing sphere', '20 cubes in a grid that ripple', 'A desk lamp you can switch on'];
+
+// Change the scene by saying what you want. Requests and what came of them are listed in order.
 function DescribeTab({ store }: { store: EditorStore }) {
   const box = useRef<HTMLTextAreaElement>(null);
   const { ai } = store;
@@ -24,28 +26,38 @@ function DescribeTab({ store }: { store: EditorStore }) {
     store.describe(prompt, (text, scene, selected, earlier) => describeScene(text, scene, selected, earlier)).then(() => { if (!store.ai.status && box.current) box.current.value = ''; });
   };
   return (
-    <>
-      <h2 id="describe-h">{empty ? 'Describe the scene' : 'Describe a change'}</h2>
-      <textarea className="say" id="describeBox" ref={box} rows={4} maxLength={2000} aria-labelledby="describe-h" disabled={ai.busy}
-        placeholder={empty ? 'A lighthouse on a rock at dusk with a slow turning beam' : 'Make the background a deep night blue and add slow drifting snow'}
-        onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }} />
-      <div className="chips">
-        <button type="button" className="primary" id="describeGo" disabled={ai.busy} onClick={send}>{ai.busy ? 'Building' : empty ? 'Build it' : 'Apply change'}</button>
-      </div>
-      <p className="status" role="status" id="describeStatus">{ai.status}</p>
-      <p className="note">
-        {sel ? 'Selected: ' + labelOf(sel) + '. Say "this" or "it" to mean that object. ' : 'Select an object first to talk about just that one. '}
-        Each change is one step, so Undo brings the scene back.
-      </p>
-      {ai.log.length > 0 && (
-        <>
-          <h2>Changes so far</h2>
+    <div className="agent">
+      <div className="agent-log">
+        <h2 id="describe-h">{empty ? 'Describe the scene' : 'Describe a change'}</h2>
+        {ai.log.length === 0 ? (
+          <>
+            <p className="note">Say what you want and it is built for you. Then keep going: ask for changes one at a time.</p>
+            {empty && (
+              <div className="chips">
+                {STARTERS.map((text) => <button key={text} type="button" onClick={() => { if (box.current) { box.current.value = text; box.current.focus(); } }}>{text}</button>)}
+              </div>
+            )}
+          </>
+        ) : (
           <ol className="said">
-            {ai.log.map((entry, i) => <li key={ai.log.length - i}><b>{entry.prompt}</b><span>{entry.summary}</span></li>)}
+            {ai.log.slice().reverse().map((entry, i) => <li key={i}><b>{entry.prompt}</b><span>{entry.summary}</span></li>)}
           </ol>
-        </>
-      )}
-    </>
+        )}
+      </div>
+      <div className="agent-box">
+        <textarea className="say" id="describeBox" ref={box} rows={3} maxLength={2000} aria-labelledby="describe-h" disabled={ai.busy}
+          placeholder={empty ? 'A lighthouse on a rock at dusk with a slow turning beam' : 'Make the background a deep night blue and add slow drifting snow'}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } }} />
+        <div className="chips">
+          <button type="button" className="primary" id="describeGo" disabled={ai.busy} onClick={send}>{ai.busy ? 'Building' : empty ? 'Build it' : 'Apply change'}</button>
+        </div>
+        <p className="status" role="status" id="describeStatus">{ai.status}</p>
+        <p className="note" id="describeNote">
+          {sel ? 'Selected: ' + labelOf(sel) + '. Say "this" or "it" to mean that object. ' : 'Select an object first to talk about just that one. '}
+          Each change is one step, so Undo brings the scene back.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -262,24 +274,29 @@ function ExportTab({ store }: { store: EditorStore }) {
   );
 }
 
-// The side panel: a tab bar and the tab that is open.
-export function Panel({ store }: { store: EditorStore }) {
+const LEFT: Tab[] = ['describe', 'objects'];
+
+// A side panel: a tab bar and the tab that is open. "all" holds every tab (narrow screens);
+// on wide screens "left" holds Describe and Objects and "right" holds the rest.
+export function Panel({ store, side = 'all' }: { store: EditorStore; side?: 'all' | 'left' | 'right' }) {
   useEditor(store);
+  const tabs = TABS.filter(([tab]) => side === 'all' || (side === 'left') === LEFT.includes(tab));
+  const open = side === 'left' ? store.leftTab : side === 'right' ? store.rightTab : store.tab;
   return (
-    <div className="panel">
+    <div className={'panel ' + side}>
       <div className="tabs" role="tablist">
-        {TABS.map(([tab, label]) => (
-          <button key={tab} type="button" role="tab" data-tab={tab} aria-selected={store.tab === tab} onClick={() => store.setTab(tab)}>{label}</button>
+        {tabs.map(([tab, label]) => (
+          <button key={tab} type="button" role="tab" data-tab={tab} aria-selected={open === tab} onClick={() => store.setTab(tab)}>{label}</button>
         ))}
       </div>
-      <div className="pane" id="pane">
-        {store.tab === 'describe' && <DescribeTab store={store} />}
-        {store.tab === 'objects' && <ObjectsTab store={store} />}
-        {store.tab === 'selected' && <SelectedTab store={store} />}
-        {store.tab === 'scene' && <SceneTab store={store} />}
-        {store.tab === 'page' && <PageTab store={store} />}
-        {store.tab === 'timeline' && <TimelineTab store={store} />}
-        {store.tab === 'export' && <ExportTab store={store} />}
+      <div className={'pane' + (open === 'describe' ? ' talk' : '')} id={side === 'left' ? 'paneLeft' : 'pane'}>
+        {open === 'describe' && <DescribeTab store={store} />}
+        {open === 'objects' && <ObjectsTab store={store} />}
+        {open === 'selected' && <SelectedTab store={store} />}
+        {open === 'scene' && <SceneTab store={store} />}
+        {open === 'page' && <PageTab store={store} />}
+        {open === 'timeline' && <TimelineTab store={store} />}
+        {open === 'export' && <ExportTab store={store} />}
       </div>
     </div>
   );
