@@ -64,6 +64,8 @@ npm run dev        # http://localhost:3000
 - Drawn shapes (an outline pad in the Selected tab), cutting one object out of another
   (`three-bvh-csg`), copies in a grid or ring, cartoon shading with outlines, six typefaces for
   3D text (`lib/fonts`, made by `scripts/make-fonts.mjs` from open-licensed fonts), and video cards.
+- Clay: a ball that is sculpted by dragging across it (`lib/clay.js`). Heights are stored per point,
+  measured out from the centre, so a form can bulge and dent but cannot fold over itself.
 - Variables shown in text with `{name}`, changed by clicks, optionally read from a web address;
   objects shown only while a variable is on; clicks that send a webhook.
 - Player control with arrow keys, WASD or a touch pad, and a camera that follows an object.

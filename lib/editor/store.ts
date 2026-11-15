@@ -36,6 +36,8 @@ export class EditorStore {
   time = 0;      // timeline playhead, in seconds
   scroll = 0;    // scroll preview in Play mode, 0 to 1
   webglFailed = false;
+  // Sculpting: while on, dragging over the selected clay object reshapes it, and the handles are put away.
+  sculpt = { on: false, mode: 'pull' as 'pull' | 'push' | 'smooth', size: 0.35, strength: 0.012 };
   wholeGroup = true; // when the selected object belongs to a group, the handles move every part of it
   // Building from a description: whether a request is running, what to tell the person, and what was asked so far.
   ai = { busy: false, status: '', log: [] as { prompt: string; summary: string }[] };
@@ -75,6 +77,7 @@ export class EditorStore {
     if (this.message) return this.message;
     if (this.mode === 'play') return 'Play mode. Hover, tap, and drag the Scroll slider.';
     const sel = this.selectedObject;
+    if (sel && sel.type === 'clay' && this.sculpt.on) return 'Drag across the clay to ' + (this.sculpt.mode === 'smooth' ? 'smooth it' : this.sculpt.mode + ' it') + '. Drag empty space to orbit.';
     if (sel && sel.group && this.wholeGroup) return 'The handles move all of ' + sel.group + '. Drag empty space to orbit.';
     return this.selected ? 'Drag the handles to move it. Drag empty space to orbit.' : 'Tap an object to select it. Drag empty space to orbit.';
   }
@@ -126,6 +129,19 @@ export class EditorStore {
         });
       });
       this.rt.scene.add(this.tc.getHelper());
+      // Brush strokes are caught before the camera controls see the pointer.
+      let stroking = false;
+      const dabAt = (e: PointerEvent) => this.rt.brush(this.selected, e.clientX, e.clientY, this.sculpt.mode, this.sculpt.size, this.sculpt.strength);
+      const sculpting = () => this.sculpt.on && this.mode === 'edit' && !!this.selectedObject && this.selectedObject.type === 'clay';
+      canvas.addEventListener('pointerdown', (e) => {
+        if (!sculpting() || !dabAt(e)) return;
+        stroking = true; this.rt.lock = true;
+        e.stopImmediatePropagation(); e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+      }, true);
+      canvas.addEventListener('pointermove', (e) => { if (stroking) { dabAt(e); e.stopImmediatePropagation(); } }, true);
+      const endStroke = (e: PointerEvent) => { if (!stroking) return; stroking = false; this.rt.lock = false; e.stopImmediatePropagation(); this.commit(); };
+      canvas.addEventListener('pointerup', endStroke, true); canvas.addEventListener('pointercancel', endStroke, true);
       this.attach();
       // Give a scene that has never been edited a preview picture for the scene list.
       const rt = this.rt;
@@ -144,7 +160,8 @@ export class EditorStore {
   }
   private attach() {
     if (!this.tc) return;
-    const root = this.mode === 'edit' && this.selected ? this.rt.get(this.selected) : null;
+    const o = this.selectedObject;
+    const root = this.mode === 'edit' && this.selected && !(this.sculpt.on && o && o.type === 'clay') ? this.rt.get(this.selected) : null;
     if (root) this.tc.attach(root); else this.tc.detach();
   }
   // A small picture of the scene for the project list.
@@ -290,6 +307,8 @@ export class EditorStore {
     this.wholeGroup = true;
     this.commit('Added ' + group + '. The handles move all of it.');
   }
+  setSculpt(change: Partial<EditorStore['sculpt']>) { Object.assign(this.sculpt, change); this.message = ''; this.attach(); this.emit(); }
+  resetClay() { const o = this.selectedObject; if (o && o.type === 'clay') { o.clay = []; this.commit('Back to a plain ball. Undo brings the sculpting back.'); } }
   setWholeGroup(on: boolean) { this.wholeGroup = on; this.emit(); }
   removeGroup(name: string) {
     this.data.objects = this.data.objects.filter((o: any) => o.group !== name);

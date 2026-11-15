@@ -4,6 +4,7 @@ import { neonSign, normalize, starter } from '../lib/scene.js';
 import { compactScene, link, sanitizeScene } from '../lib/ai/sanitize.js';
 import { readReply, runBuild } from '../lib/ai/build.js';
 import { LIBRARY, PARTS } from '../lib/templates.js';
+import { clayBase, dab } from '../lib/clay.js';
 
 const toolReply = (input) => ({ status: 200, body: { stop_reason: 'tool_use', content: [{ type: 'text', text: 'Here you go.' }, { type: 'tool_use', name: 'build_scene', input }] } });
 const deps = (over = {}) => ({ key: 'k', user: async () => 'u1', quota: async () => ({ allowed: true, used: 1, limit: 40 }), ask: async () => toolReply({ name: 'T', summary: 'S', scene: { objects: [{ id: 'a', type: 'box' }] } }), ...over });
@@ -259,4 +260,30 @@ test('drawn shapes, copies, cuts, variables and controls are cleaned', () => {
   assert.equal(s.vars[1].src.url, '');
   assert.equal(by.bell.click.action, 'hook');
   assert.deepEqual([by.sneak.click.action, by.sneak.click.url], ['toggle', ''], 'the model cannot add a webhook');
+});
+
+test('the clay ball is the same every time and the brushes do what they say', () => {
+  const base = clayBase();
+  assert.equal(base.count, 2562);
+  assert.equal(base.index.length, 5120 * 3);
+  assert.ok(Math.abs(Math.hypot(base.dirs[300], base.dirs[301], base.dirs[302]) - 1) < 1e-6);
+  const h = new Array(base.count).fill(0);
+  const touched = dab(h, [0, 1, 0], 'pull', 0.4, 0.05);
+  assert.ok(touched > 20 && touched < 400, 'a brush touches a patch, not the whole ball');
+  const top = h.reduce((best, v, i) => (base.dirs[i * 3 + 1] > base.dirs[best * 3 + 1] ? i : best), 0);
+  assert.ok(h[top] > 0.04, 'the middle of the brush moves most');
+  assert.equal(h.filter((v) => v < 0).length, 0);
+  const bottom = h.reduce((best, v, i) => (base.dirs[i * 3 + 1] < base.dirs[best * 3 + 1] ? i : best), 0);
+  assert.equal(h[bottom], 0, 'the far side is untouched');
+  dab(h, [0, 1, 0], 'push', 0.4, 0.2);
+  assert.ok(h[top] < -0.1);
+  for (let i = 0; i < 60; i++) dab(h, [0, 1, 0], 'push', 0.4, 0.2);
+  assert.equal(h[top], -0.6, 'pushing stops before the ball turns inside out');
+  const rough = h.slice();
+  for (let i = 0; i < 20; i++) dab(h, [0, 1, 0], 'smooth', 0.6, 0.1);
+  const spread = (a) => Math.max(...a) - Math.min(...a);
+  assert.ok(spread(h) < spread(rough), 'smoothing evens the surface out');
+  const kept = sanitizeScene({ objects: [{ id: 'c', type: 'clay', clay: [9, 9, 9] }, { id: 'n', type: 'clay', clay: [1] }] }, { camera: { pos: [0, 1, 5], target: [0, 0, 0] }, objects: [{ id: 'c', type: 'clay', clay: [0.1, 5, -3] }] });
+  assert.deepEqual(kept.objects[0].clay, [0.1, 2.5, -0.6], 'a described change keeps existing sculpting and cannot rewrite it');
+  assert.equal(kept.objects[1].clay, undefined);
 });

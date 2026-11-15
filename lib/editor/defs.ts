@@ -19,6 +19,7 @@ export type FieldDef = {
 const notModel = (o: any) => o.type !== 'model';
 const solid = (o: any) => o.type !== 'model' && o.type !== 'particles' && o.type !== 'light';
 const shaped = (o: any) => solid(o) && o.type !== 'text' && o.type !== 'image' && o.type !== 'video';
+// (clay behaves like any solid shape)
 const canCollide = (o: any) => o.type !== 'particles' && o.type !== 'light' && o.type !== 'cord';
 const shines = (o: any) => o.type !== 'model' && o.type !== 'light';
 const stateLook = (s: string): FieldDef[] => {
