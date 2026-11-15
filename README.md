@@ -59,6 +59,16 @@ npm run dev        # http://localhost:3000
 - Export tab, Code: an HTML or React snippet that runs the scene on any page through
   `/wonderfull-runtime.js`, which `scripts/build-embed.mjs` bundles from `lib/embed.js` before each build.
 
+## Working together
+
+- Sharing: the owner adds people by email (table `project_members`). Members can open and edit the scene
+  and its files. Only the owner can publish, delete or share it.
+- Live editing: `lib/editor/sync.js` works out what changed per object and folds other people's changes in;
+  `lib/editor/transport.ts` carries them over a private Supabase Realtime channel named `scene:<id>`, or
+  between tabs of one browser for a scene kept locally. The later change to the same object wins.
+- Comments: table `comments`, shown in the Comments tab, optionally pinned to an object.
+- The rules for all of this are in `supabase/migrations/collab.sql`.
+
 ## Shapes, logic and play
 
 - Drawn shapes (an outline pad in the Selected tab), cutting one object out of another

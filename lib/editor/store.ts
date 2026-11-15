@@ -6,9 +6,11 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { createSceneRuntime } from '../runtime';
 import { NAMES, clone, mk, normalize, objectSig, putKey, starter, uid } from '../scene';
 import { createHistory } from './history';
+import { applyPatch, diffScene } from './sync';
+import type { Peer, Transport } from './transport';
 
 export type Mode = 'edit' | 'play';
-export type Tab = 'describe' | 'objects' | 'selected' | 'scene' | 'page' | 'timeline' | 'export';
+export type Tab = 'comments' | 'describe' | 'objects' | 'selected' | 'scene' | 'page' | 'timeline' | 'export';
 export type Gizmo = 'translate' | 'rotate' | 'scale';
 export type EditorOptions = {
   data: any;
@@ -16,6 +18,12 @@ export type EditorOptions = {
   viewUrl: string;
   onSave: (data: any, thumb: string) => void;
   onAsset: (fileName: string, buf: ArrayBuffer) => void;
+  // Live editing with other people, when the scene has a channel to reach them on.
+  sync?: Transport | null;
+  me?: { name: string; color: string };
+  projectId?: string;
+  cloud?: boolean;
+  owner?: boolean;
 };
 
 const names = NAMES as Record<string, string>;
@@ -42,7 +50,11 @@ export class EditorStore {
   // Building from a description: whether a request is running, what to tell the person, and what was asked so far.
   ai = { busy: false, status: '', log: [] as { prompt: string; summary: string }[] };
 
-  private opts: EditorOptions;
+  peers: Peer[] = [];           // other people editing this scene right now
+  commentsStamp = 0;            // bumps when someone else adds or resolves a comment
+  private shared: any = null;   // the scene as the others last saw it
+  private lastNudge = 0;
+  opts: EditorOptions;
   private rt: any = null;
   private tc: any = null;
   private message = '';
@@ -61,12 +73,45 @@ export class EditorStore {
     this.viewUrl = opts.viewUrl;
     this.history = createHistory(JSON.stringify(this.data));
     this.track();
+    this.shared = clone(this.data);
+    if (opts.sync) {
+      opts.sync.on((type, payload) => {
+        if (type === 'patch') this.applyRemote(payload);
+        else if (type === 'comments') { this.commentsStamp++; this.emit(); }
+      });
+      opts.sync.onPeers((peers) => { this.peers = peers; this.emit(); });
+      this.announce();
+    }
   }
 
   // ----- subscription (used by the useEditor hook) -----
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   getVersion = () => this.version;
   private emit() { this.version++; this.listeners.forEach((fn) => fn()); }
+
+  // ----- live editing -----
+  private announce() { if (this.opts.sync && this.opts.me) this.opts.sync.presence({ ...this.opts.me, selected: this.selected }); }
+  // Sends whatever changed since the others last heard from this editor.
+  private share() {
+    if (!this.opts.sync) return;
+    const patch = diffScene(this.shared, this.data);
+    if (!patch) return;
+    this.shared = clone(this.data);
+    this.opts.sync.send('patch', patch);
+  }
+  // Someone else changed the scene. Whatever this person is dragging right now is left alone.
+  private applyRemote(patch: any) {
+    const o = this.selectedObject;
+    const busy = this.rt && this.rt.lock && o ? this.groupOf(o).map((x: any) => x.id) : [];
+    if (!applyPatch(this.data, patch, busy)) return;
+    applyPatch(this.shared, clone(patch), busy);
+    normalize(this.data);
+    this.syncRuntime();
+    this.history.commit(JSON.stringify(this.data));
+    this.emit();
+  }
+  tellComments() { if (this.opts.sync) this.opts.sync.send('comments', 1); }
+  peersOn(id: string) { return this.peers.filter((p) => p.selected === id); }
 
   // ----- reading -----
   byId(id: string | null) { return id ? this.data.objects.find((o: any) => o.id === id) || null : null; }
@@ -116,6 +161,8 @@ export class EditorStore {
         o.pos = root.position.toArray().map(r3);
         o.rot = [root.rotation.x, root.rotation.y, root.rotation.z].map((v: number) => +deg(v).toFixed(1));
         o.scale = root.scale.toArray().map((v: number) => +Math.max(0.05, Math.abs(v)).toFixed(3));
+        // Others see a drag as it happens, a few times a second.
+        if (this.opts.sync && performance.now() - this.lastNudge > 120) { this.lastNudge = performance.now(); this.share(); }
         if (!startInv || !mates.length) return;
         // The same move, turn or resize, applied to every other part around the dragged one.
         root.updateMatrix();
@@ -201,6 +248,7 @@ export class EditorStore {
     this.saveTimer = setTimeout(() => {
       this.saveTimer = undefined;
       if (this.history.commit(JSON.stringify(this.data))) this.emit();
+      this.share();
       this.opts.onSave(this.data, this.thumb());
     }, 300);
   }
@@ -229,6 +277,7 @@ export class EditorStore {
     if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = undefined; }
     this.replaceScene(JSON.parse(snap));
     this.message = message;
+    this.share();
     this.opts.onSave(this.data, this.thumb());
     this.emit();
   }
@@ -239,6 +288,7 @@ export class EditorStore {
     if (openTab) this.tab = 'selected';
     this.message = '';
     this.attach();
+    this.announce();
     this.emit();
   }
   setMode(mode: Mode) {

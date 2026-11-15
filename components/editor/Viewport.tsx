@@ -53,6 +53,11 @@ export function Viewport({ store }: { store: EditorStore }) {
           <input type="range" id="scrollPrev" min={0} max={1} step={0.001} value={store.scroll} style={fill(store.scroll)} onChange={(e) => store.setScroll(Number(e.target.value))} />
         </label>
       )}
+      {store.peers.length > 0 && (
+        <ul className="peers" id="peers" aria-label="Also editing this scene">
+          {store.peers.map((p) => <li key={p.key} style={{ background: p.color }} title={p.name + ' is editing'}>{p.name.slice(0, 2).toUpperCase()}</li>)}
+        </ul>
+      )}
       <p className="hint" id="hint" role="status">{store.hint}</p>
     </div>
   );

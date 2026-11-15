@@ -11,6 +11,7 @@ export type Project = {
   thumb?: string;
   isPublic?: boolean;
   where?: 'local' | 'cloud';
+  shared?: boolean;   // someone else's scene, shared with this account
   createdAt: number;
   updatedAt: number;
 };
@@ -39,8 +40,8 @@ export async function signOut(): Promise<void> {
 
 // ----- scenes -----
 export async function listProjects(): Promise<Project[]> {
-  const [mine, here] = await Promise.all([cloud.listProjects().catch(() => [] as Project[]), local.listProjects()]);
-  return [...mine, ...here].sort((a, b) => b.updatedAt - a.updatedAt);
+  const [mine, theirs, here] = await Promise.all([cloud.listProjects().catch(() => [] as Project[]), cloud.sharedProjects().catch(() => [] as Project[]), local.listProjects()]);
+  return [...mine, ...theirs, ...here].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 export const getProject = (id: string) => side(id).getProject(id);
 export const saveProject = (p: Project) => side(p.id).saveProject(p);

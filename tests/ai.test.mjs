@@ -5,6 +5,7 @@ import { compactScene, link, sanitizeScene } from '../lib/ai/sanitize.js';
 import { readReply, runBuild } from '../lib/ai/build.js';
 import { LIBRARY, PARTS } from '../lib/templates.js';
 import { clayBase, dab } from '../lib/clay.js';
+import { applyPatch, diffScene } from '../lib/editor/sync.js';
 
 const toolReply = (input) => ({ status: 200, body: { stop_reason: 'tool_use', content: [{ type: 'text', text: 'Here you go.' }, { type: 'tool_use', name: 'build_scene', input }] } });
 const deps = (over = {}) => ({ key: 'k', user: async () => 'u1', quota: async () => ({ allowed: true, used: 1, limit: 40 }), ask: async () => toolReply({ name: 'T', summary: 'S', scene: { objects: [{ id: 'a', type: 'box' }] } }), ...over });
@@ -286,4 +287,27 @@ test('the clay ball is the same every time and the brushes do what they say', ()
   const kept = sanitizeScene({ objects: [{ id: 'c', type: 'clay', clay: [9, 9, 9] }, { id: 'n', type: 'clay', clay: [1] }] }, { camera: { pos: [0, 1, 5], target: [0, 0, 0] }, objects: [{ id: 'c', type: 'clay', clay: [0.1, 5, -3] }] });
   assert.deepEqual(kept.objects[0].clay, [0.1, 2.5, -0.6], 'a described change keeps existing sculpting and cannot rewrite it');
   assert.equal(kept.objects[1].clay, undefined);
+});
+
+test('live editing sends only what changed and two editors end up with the same scene', () => {
+  const start = () => ({ bg: '#fff', fog: { on: false }, objects: [{ id: 'a', type: 'box', pos: [0, 0, 0] }, { id: 'b', type: 'sphere', pos: [1, 0, 0] }, { id: 'c', type: 'cone', pos: [2, 0, 0] }] });
+  const ann = start(), bo = start();
+  assert.equal(diffScene(ann, start()), null);
+  const annBefore = start(), boBefore = start();
+  ann.objects[0].pos = [5, 0, 0]; ann.bg = '#000'; ann.objects.push({ id: 'd', type: 'star', pos: [3, 0, 0] });
+  bo.objects[1].pos = [1, 9, 0]; bo.objects.splice(2, 1);
+  const fromAnn = diffScene(annBefore, ann), fromBo = diffScene(boBefore, bo);
+  assert.deepEqual(Object.keys(fromAnn.objects), ['a', 'd']);
+  assert.deepEqual(fromAnn.scene, { bg: '#000' });
+  assert.deepEqual(fromBo.objects, { b: { id: 'b', type: 'sphere', pos: [1, 9, 0] }, c: null });
+  applyPatch(ann, fromBo); applyPatch(bo, fromAnn);
+  const view = (s) => s.objects.map((o) => o.id + ':' + o.pos.join(',')).sort().join(' ');
+  assert.equal(view(ann), view(bo));
+  assert.equal(view(ann), 'a:5,0,0 b:1,9,0 d:3,0,0');
+  assert.equal(bo.bg, '#000');
+  const dragging = start();
+  applyPatch(dragging, { objects: { a: { id: 'a', type: 'box', pos: [9, 9, 9] }, b: null } }, ['a']);
+  assert.deepEqual(dragging.objects.map((o) => o.id + o.pos[0]), ['a0', 'c2'], 'an object being dragged is left alone');
+  applyPatch(dragging, { objects: { x: { id: 'y', type: 'box' }, z: 'junk' }, scene: { objects: [] } });
+  assert.equal(dragging.objects.length, 2, 'malformed changes are ignored');
 });
