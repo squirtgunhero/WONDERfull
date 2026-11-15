@@ -2,6 +2,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createSceneRuntime, usesScroll } from '../../lib/runtime';
+import { normalize } from '../../lib/scene';
 import { getAssets, getProject, type Project } from '../../lib/store';
 
 function Viewer() {
@@ -30,7 +31,7 @@ function Viewer() {
   useEffect(() => {
     if (!project || !buffers || !canvas.current) return;
     let rt: any = null;
-    try { rt = createSceneRuntime(canvas.current, project.data, { buffers, noFetch: true, overlay: overlay.current }); } catch (e) { setMissing(true); }
+    try { normalize(project.data); rt = createSceneRuntime(canvas.current, project.data, { buffers, noFetch: true, overlay: overlay.current }); } catch (e) { setMissing(true); }
     return () => { if (rt) rt.dispose(); };
   }, [project, buffers]);
 
