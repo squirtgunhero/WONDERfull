@@ -126,3 +126,7 @@ revoke all on function public.can_join_topic(text) from public, anon;
 grant execute on function public.can_join_topic(text) to authenticated;
 create policy "people on a scene listen to its live channel" on realtime.messages for select to authenticated using (public.can_join_topic((select realtime.topic())));
 create policy "people on a scene send on its live channel" on realtime.messages for insert to authenticated with check (public.can_join_topic((select realtime.topic())));
+
+-- Trigger functions are run by the database, never called directly.
+revoke all on function public.keep_owner_settings() from public, anon, authenticated;
+revoke all on function public.keep_comment_fixed() from public, anon, authenticated;
