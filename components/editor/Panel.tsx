@@ -12,7 +12,7 @@ const names = NAMES as Record<string, string>;
 const templates = (LIBRARY as { label: string; make: () => any }[]).map((t) => [t.label, t.make] as [string, () => any]);
 const parts = PARTS as [string, () => any[]][];
 const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
-const ADDABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d', 'text', 'particles', 'cord', 'light'];
+const ADDABLE = ['clay', 'box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d', 'text', 'particles', 'cord', 'light'];
 
 const STARTERS = ['A glossy bouncing sphere', '20 cubes in a grid that ripple', 'A desk lamp you can switch on'];
 
@@ -115,7 +115,7 @@ function ObjectsTab({ store }: { store: EditorStore }) {
   );
 }
 
-const CUTTABLE = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d'];
+const CUTTABLE = ['clay', 'box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d'];
 
 // A pad for drawing a flat outline: tap empty space to add a corner, drag a corner to move it.
 function ShapePad({ o, store }: { o: any; store: EditorStore }) {
@@ -177,6 +177,26 @@ function SelectedTab({ store }: { store: EditorStore }) {
         </label>
       )}
       {o.type === 'shape' && <ShapePad o={o} store={store} />}
+      {o.type === 'clay' && (
+        <div className="lib">
+          <h2>Sculpt</h2>
+          <label className="grpcheck" htmlFor="sculptOn">
+            <input type="checkbox" id="sculptOn" checked={store.sculpt.on} onChange={(e) => store.setSculpt({ on: e.target.checked })} />
+            Sculpt in the viewport. Dragging across the clay reshapes it.
+          </label>
+          <div className="chips" role="group" aria-label="Brush">
+            {([['pull', 'Pull out'], ['push', 'Push in'], ['smooth', 'Smooth']] as const).map(([mode, label]) => (
+              <button key={mode} type="button" data-brush={mode} aria-pressed={store.sculpt.mode === mode} onClick={() => store.setSculpt({ mode, on: true })}>{label}</button>
+            ))}
+          </div>
+          <div className="row"><label htmlFor="brushSize">Brush size</label>
+            <input type="range" id="brushSize" min={0.08} max={1.2} step={0.01} value={store.sculpt.size} style={fill(store.sculpt.size, 0.08, 1.2)} onChange={(e) => store.setSculpt({ size: Number(e.target.value) })} /></div>
+          <div className="row"><label htmlFor="brushStrength">Strength</label>
+            <input type="range" id="brushStrength" min={0.005} max={0.12} step={0.005} value={store.sculpt.strength} style={fill(store.sculpt.strength, 0.005, 0.12)} onChange={(e) => store.setSculpt({ strength: Number(e.target.value) })} /></div>
+          <div className="chips"><button type="button" id="resetClay" onClick={() => store.resetClay()}>Start again from a plain ball</button></div>
+          <p className="note">Clay starts as a ball. Stretch it with Size for other starting forms. Each stroke is one step for Undo.</p>
+        </div>
+      )}
       {CUTTABLE.includes(o.type) && !o.cutter && (
         <div className="lib">
           <h2>Cut away</h2>

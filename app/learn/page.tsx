@@ -73,6 +73,7 @@ const LESSONS: Lesson[] = [
     'To cut a hole, select the object, and under Cut away pick the object to carve out of it. Move the cutting object to change the cut.',
     'Under Copies, repeat an object in a grid or around a ring.',
     'Shading set to Cartoon with an Outline gives a drawn look. 3D text has six typefaces.',
+    'Add Clay for freeform work. Turn on Sculpt in the viewport, then drag across it to pull out, push in or smooth.',
   ] },
   { id: 'variables', title: 'Variables, live data and games', about: 'Give the scene a memory and let visitors play.', steps: [
     'In the Scene tab, add a variable such as score. Write {score} in any text to show it.',
