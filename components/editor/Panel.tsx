@@ -1,8 +1,9 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { objectDefs, sceneDefs, sectionDefs, timelineDefs } from '../../lib/editor/defs';
 import { labelOf, type EditorStore, type Tab } from '../../lib/editor/store';
 import { describeScene } from '../../lib/ai/client';
+import { addComment, deleteComment, listComments, me as currentUser, resolveComment, type Comment } from '../../lib/cloud';
 import { NAMES } from '../../lib/scene';
 import { LIBRARY, PARTS } from '../../lib/templates';
 import { Fields, fill } from './Fields';
@@ -11,7 +12,7 @@ import { useEditor } from './useEditor';
 const names = NAMES as Record<string, string>;
 const templates = (LIBRARY as { label: string; make: () => any }[]).map((t) => [t.label, t.make] as [string, () => any]);
 const parts = PARTS as [string, () => any[]][];
-const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export']];
+const TABS: [Tab, string][] = [['describe', 'Describe'], ['objects', 'Objects'], ['selected', 'Selected'], ['scene', 'Scene'], ['page', 'Page'], ['timeline', 'Timeline'], ['export', 'Export'], ['comments', 'Comments']];
 const ADDABLE = ['clay', 'box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'knot', 'pyramid', 'dome', 'arch', 'star', 'heart', 'shape', 'text3d', 'text', 'particles', 'cord', 'light'];
 
 const STARTERS = ['A glossy bouncing sphere', '20 cubes in a grid that ripple', 'A desk lamp you can switch on'];
@@ -76,6 +77,7 @@ function ObjectsTab({ store }: { store: EditorStore }) {
       <div className={'item' + (o.id === store.selected ? ' sel' : '')} key={o.id}>
         <button type="button" className="name" onClick={() => store.select(o.id, true)}>
           {labelOf(o)}<small>{missing ? 'file not loaded, import it again' : names[o.type]}</small>
+          {store.peersOn(o.id).map((p) => <i key={p.key} className="dotc who" style={{ background: p.color }} title={p.name + ' has this selected'} />)}
         </button>
         <button type="button" className="mini" aria-label={'Duplicate ' + labelOf(o)} onClick={() => store.duplicate(o.id)}>Copy</button>
         <button type="button" className="mini" aria-label={'Delete ' + labelOf(o)} onClick={() => store.removeObject(o.id)}>Delete</button>
@@ -475,6 +477,58 @@ function ExportTab({ store }: { store: EditorStore }) {
   );
 }
 
+// Notes people leave on a scene, optionally about one object. Kept with the scene in the account.
+function CommentsTab({ store }: { store: EditorStore }) {
+  const { projectId, cloud } = store.opts;
+  const [list, setList] = useState<Comment[] | null>(null);
+  const [mine, setMine] = useState('');
+  const [msg, setMsg] = useState('');
+  const [about, setAbout] = useState(true);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const sel = store.selectedObject;
+  const load = () => { if (cloud && projectId) listComments(projectId).then(setList, () => { setList([]); setMsg('Comments could not be loaded. Sign in to see them.'); }); };
+  useEffect(() => { load(); currentUser().then((u) => setMine(u ? u.id : ''), () => {}); }, [projectId, store.commentsStamp]);
+  if (!cloud || !projectId) return <p className="note">Comments are kept with scenes saved to an account. This scene lives in this browser. Sign in from All scenes, then use Copy to account.</p>;
+  const changed = () => { load(); store.tellComments(); };
+  const send = async () => {
+    const body = box.current ? box.current.value.trim() : '';
+    if (!body) return;
+    try { await addComment(projectId, body, about && sel ? sel.id : null); if (box.current) box.current.value = ''; setMsg(''); changed(); }
+    catch (e: any) { setMsg('The comment was not saved: ' + (e?.message || 'unknown error')); }
+  };
+  const act = (run: Promise<void>) => run.then(changed, () => setMsg('That did not work.'));
+  const open = (list || []).filter((c) => !c.resolved), done = (list || []).filter((c) => c.resolved);
+  const row = (c: Comment) => {
+    const o = c.objectId ? store.byId(c.objectId) : null;
+    return (
+      <li key={c.id} className={c.resolved ? 'done' : ''}>
+        <b>{c.authorEmail.split('@')[0]}{o ? <> on <button type="button" className="quiet inline" onClick={() => store.select(o.id)}>{labelOf(o)}</button></> : null}</b>
+        <span>{c.body}</span>
+        <div className="acts">
+          <button type="button" className="quiet" onClick={() => act(resolveComment(c.id, !c.resolved))}>{c.resolved ? 'Reopen' : 'Resolve'}</button>
+          {(c.author === mine || store.opts.owner) && <button type="button" className="quiet" onClick={() => act(deleteComment(c.id))}>Delete</button>}
+        </div>
+      </li>
+    );
+  };
+  return (
+    <>
+      <h2 id="comment-h">Add a comment</h2>
+      <textarea className="say" id="commentBox" ref={box} rows={3} maxLength={1000} aria-labelledby="comment-h" placeholder="What should change, or what do you like?" />
+      {sel && (
+        <label className="grpcheck" htmlFor="commentAbout">
+          <input type="checkbox" id="commentAbout" checked={about} onChange={(e) => setAbout(e.target.checked)} />About {labelOf(sel)}
+        </label>
+      )}
+      <div className="chips"><button type="button" className="primary" id="commentGo" onClick={send}>Comment</button></div>
+      <p className="status" role="status">{msg}</p>
+      <h2>Open</h2>
+      {list === null ? <p className="note">Loading.</p> : open.length ? <ol className="said notes">{open.map(row)}</ol> : <p className="note">No open comments.</p>}
+      {done.length > 0 && <><h2>Resolved</h2><ol className="said notes">{done.map(row)}</ol></>}
+    </>
+  );
+}
+
 const LEFT: Tab[] = ['describe', 'objects'];
 
 // A side panel: a tab bar and the tab that is open. "all" holds every tab (narrow screens);
@@ -498,6 +552,7 @@ export function Panel({ store, side = 'all' }: { store: EditorStore; side?: 'all
         {open === 'page' && <PageTab store={store} />}
         {open === 'timeline' && <TimelineTab store={store} />}
         {open === 'export' && <ExportTab store={store} />}
+        {open === 'comments' && <CommentsTab store={store} />}
       </div>
     </div>
   );

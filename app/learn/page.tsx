@@ -82,6 +82,13 @@ const LESSONS: Lesson[] = [
     'A variable can read a live value from a web address that returns JSON. A click can also send a webhook.',
     'Set Player moves it on an object for arrow key, WASD and touch pad control. Camera follows keeps it in view.',
   ] },
+  { id: 'together', title: 'Work on a scene together', about: 'Share a scene, edit it at the same time, and leave comments.', steps: [
+    'Save the scene to your account, then press Share in the editor and add a person by email.',
+    'They sign in with that email and find the scene on their list, marked Shared with you.',
+    'When you both have it open, a badge shows who else is there, and a dot marks what they have selected.',
+    'Changes appear for everyone as they are made. If two people change the same object at once, the later change wins.',
+    'The Comments tab holds notes. Select an object first to pin a comment to it. Anyone on the scene can resolve one.',
+  ] },
   { id: 'publish', title: 'Publish, embed and export code', about: 'Put the scene in front of people.', steps: [
     'Sign in so the scene is saved to your account, then press Publish in the editor.',
     'Open live page is the link to share.',

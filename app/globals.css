@@ -199,6 +199,17 @@ svg.pad .fillp { fill: rgba(36, 56, 245, 0.16); stroke: var(--accent); stroke-wi
 svg.pad .pt { fill: var(--paper); stroke: var(--accent); stroke-width: 0.03; }
 svg.pad .pt.on { fill: var(--accent); }
 .pane .group.var { padding-top: 12px; border-top: 1px solid var(--line); }
+.peers { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.peers li { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; border: 2px solid #fff; box-shadow: var(--lift); }
+.dotc.who { margin: 0 0 0 8px; }
+.share { position: relative; }
+.sharebox { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: min(340px, 86vw); display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--lift); }
+.sharebox .newrow input { flex: 1; min-width: 0; }
+.sharebox .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.said.notes { flex-direction: column; }
+.said.notes li.done { opacity: 0.6; }
+.said.notes .acts { display: flex; gap: 2px; margin-left: -8px; }
+button.inline { display: inline; padding: 0 2px; border: 0; background: none; color: var(--accent); font-weight: 600; }
 .lib { display: flex; flex-direction: column; gap: 10px; }
 .dotc { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; border: 1px solid rgba(0, 0, 0, 0.15); vertical-align: -1px; }
 .item.cam { grid-template-columns: minmax(0, 1fr) auto auto auto; }

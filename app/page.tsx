@@ -182,17 +182,17 @@ export default function Dashboard() {
                   <div className="pn">{p.name}</div>
                 )}
                 <div className="tags">
-                  {p.where === 'cloud' ? (p.isPublic ? <span className="tag live">Published</span> : <span className="tag">Private</span>) : <span className="tag">This browser</span>}
+                  {p.shared ? <span className="tag live">Shared with you</span> : p.where === 'cloud' ? (p.isPublic ? <span className="tag live">Published</span> : <span className="tag">Private</span>) : <span className="tag">This browser</span>}
                   <time dateTime={new Date(p.updatedAt).toISOString()}>Edited {when(p.updatedAt)}</time>
                 </div>
                 <div className="acts">
                   <a className="linkbtn quiet" href={'/view?id=' + p.id} target="_blank" rel="noopener">Live page</a>
-                  <button type="button" className="quiet" onClick={() => setRenaming(p.id)}>Rename</button>
+                  {!p.shared && <button type="button" className="quiet" onClick={() => setRenaming(p.id)}>Rename</button>}
                   <button type="button" className="quiet" onClick={() => act(() => duplicateProject(p.id))}>Duplicate</button>
                   {email && p.where === 'local' && (
                     <button type="button" className="quiet" onClick={() => act(() => duplicateProject(p.id, p.name))}>Copy to account</button>
                   )}
-                  <button type="button" className="quiet danger" onClick={() => remove(p.id)}>{armed === p.id ? 'Tap again to delete' : 'Delete'}</button>
+                  {!p.shared && <button type="button" className="quiet danger" onClick={() => remove(p.id)}>{armed === p.id ? 'Tap again to delete' : 'Delete'}</button>}
                 </div>
               </div>
             </div>
