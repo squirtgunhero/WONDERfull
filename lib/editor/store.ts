@@ -91,7 +91,7 @@ export class EditorStore {
         onChange: () => this.commit(),
         progress: () => this.scroll,
         onPick: (id: string | null) => { if (this.tc && this.tc.axis) return; this.select(id, !!id); },
-        onLink: (url: string) => this.say('On the live page this opens ' + url),
+        onLink: (url: string, kind?: string) => this.say(kind === 'hook' ? 'On the live page this tap sends a webhook to ' + url : 'On the live page this opens ' + url),
       });
       this.tc = new TransformControls(this.rt.camera, canvas);
       // Bigger handles where the pointer is a finger.
